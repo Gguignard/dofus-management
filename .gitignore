@@ -1,0 +1,10 @@
+# Réglages locaux de Claude Code
+.claude/settings.local.json
+
+# Sauvegardes exportées depuis l'app
+dofus-management_*.json
+
+# Système
+Thumbs.db
+desktop.ini
+.DS_Store
