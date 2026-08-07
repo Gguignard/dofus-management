@@ -2538,7 +2538,21 @@ const famRatio = (xp, prix) => {
   const pxr = famPrixParXpRes(xp, prix), etalon = famPrixParXp();
   return (pxr === null || etalon <= 0) ? null : pxr / etalon;
 };
-const fmtRatio = r => r === null ? '\u2014' : r.toFixed(2).replace('.', ',') + ' \u00d7';
+/* Le ratio brut devient illisible aux extremes : une ressource 2000 fois
+   moins chere que la croquette donne 0,0005, que deux decimales ecrasent a
+   zero. On affiche donc le facteur dans le sens qui se lit, et on garde le
+   ratio brut pour le tri. */
+function ratioLabel(r){
+  if(r === null || !isFinite(r)) return { txt:'\u2014', tone:'dim', note:'' };
+  if(Math.abs(r - 1) < 0.005)   return { txt:'1,00 \u00d7', tone:'gold', note:'\u00e9quivalente' };
+  const moinsCher = r < 1;
+  const f = moinsCher ? 1 / r : r;
+  const txt = (f >= 100 ? Math.round(f).toLocaleString('fr-FR')
+             : f >= 10  ? f.toFixed(1).replace('.', ',')
+                        : f.toFixed(2).replace('.', ',')) + ' \u00d7';
+  return { txt, tone: moinsCher ? 'credit' : 'debit',
+           note: moinsCher ? 'moins ch\u00e8re' : 'plus ch\u00e8re' };
+}
 
 function renderFamParams(){
   const f = S.familier;
@@ -2635,8 +2649,7 @@ function famRowsHtml(data){
     const hdv   = getPrice(r.nom);
     const pxr   = famPrixParXpRes(r.xp, hdv);
     const ratio = famRatio(r.xp, hdv);
-    const tone  = ratio === null ? 'dim' : ratio < 1 ? 'credit' : ratio > 1 ? 'debit' : 'gold';
-    const verdict = ratio === null ? '' : ratio < 1 ? 'moins chère' : ratio > 1 ? 'plus chère' : 'équivalente';
+    const rl    = ratioLabel(ratio);
     const isFav = favs.has(r.nom);
     return `<tr data-nom="${esc(r.nom)}">
       <td class="c"><button class="btn-icon" data-act="fav" title="${isFav ? 'Retirer des favoris' : 'Mettre en favori'}"
@@ -2646,8 +2659,8 @@ function famRowsHtml(data){
       <td class="col-money">${moneyCell(lim, 'gold')}</td>
       <td class="col-money"><input type="number" min="0" data-f="hdv" value="${hdv === null ? '' : hdv}" placeholder="—"></td>
       <td class="col-money"><span class="money ${pxr === null ? 'dim' : ''}">${pxr === null ? '—' : fmtDec(pxr, 2)}</span></td>
-      <td class="col-money"><span class="money ${tone}">${fmtRatio(ratio)}</span>
-        ${verdict ? `<div style="font-size:11px;color:var(--text-3)">${verdict}</div>` : ''}</td>
+      <td class="col-money"><span class="money ${rl.tone}">${rl.txt}</span>
+        ${rl.note ? `<div style="font-size:11px;color:var(--text-3)">${rl.note}</div>` : ''}</td>
     </tr>`;
   }).join('');
 }
