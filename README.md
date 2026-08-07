@@ -25,15 +25,16 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 | Onglet | Ce qu'il fait |
 |---|---|
 | **Bilan** | Solde cumulé, chiffre d'affaires net, rentabilité moyenne, capital immobilisé en vente, meilleures marges par item |
-| **Craft** | Recherche d'item, recette remplie automatiquement, coût des ressources, comparaison prix marché / ton prix, dossiers |
+| **Craft** | Recherche d'équipement, recette remplie automatiquement et verrouillée, coût des ressources, comparaison prix marché / ton prix, dossiers |
 | **Forgemagie** | Relevé des prix de runes, arbitrage acheter-ou-crafter, session de forge avec coût des runes et ROI |
-| **Familier** | Prix limite par ressource selon ton budget, 2117 ressources filtrables par zone, favoris, planification de lots |
+| **Familier** | Ratio de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
 | **Prix** | Le référentiel commun : ressources et runes au même endroit |
 | **Ventes** | File des items en vente (venus du Craft ou de la Forge), puis registre des ventes conclues |
 | **Données** | Export, import, réinitialisation |
 
 ### Ce que la fusion apporte
 
+- **Les recettes ne se retouchent pas par accident.** Les ingrédients venus de l'API sont affichés en texte, quantités comprises : seul leur prix est saisissable. Un bouton déverrouille la recette si l'API se trompe, et les lignes ajoutées à la main restent libres.
 - **Un prix saisi une fois vaut partout.** Le prix d'une ressource entré dans le Craft remplit la colonne « Prix HDV » du Familier et apparaît dans l'onglet Prix. Plus de triple saisie.
 - **Un seul bilan.** Un craft revendu et un item forgé alimentent le même registre : le solde en haut à gauche est ton gain réel, tous ateliers confondus.
 - **Le craft nourrit la forge.** Dans une session de forgemagie, « Rattacher à un craft enregistré » reprend son coût comme prix de l'item brut.
@@ -47,9 +48,18 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 
 **Forgemagie** — `Pa = 3 runes de base` · `Ra = 3 Pa` ou `9 runes de base` · le prix retenu est le moins cher entre le HDV et les crafts · `runes posées = stock + achetées − restantes` · `coût = Σ(posées × prix retenu)` · `ROI = profit ÷ (item brut + coût des runes)`
 
-**Familier** — `croquettes = XP total ÷ XP par croquette` · `prix max par croquette = budget ÷ croquettes` · `quantité = XP par croquette ÷ (XP ressource × bonus)` · `prix limite = prix max par croquette ÷ quantité` · bonus Almanax `×1,5`
+**Familier** — une croquette vaut toujours **500 XP** ; c'est le prix que tu la paies qui varie, et c'est lui qui fixe l'étalon.
 
-Valeurs par défaut : XP total `179 592`, XP par croquette `500`, budget `5 000 000`.
+```
+prix du point d'XP  = prix d'une croquette ÷ 500
+prix limite         = XP de la ressource × prix du point d'XP
+prix / XP ressource = prix de la ressource ÷ XP de la ressource
+ratio vs croquette  = prix/XP ressource ÷ prix du point d'XP
+```
+
+Un ratio **sous 1** veut dire que la ressource nourrit ton familier moins cher que la croquette — c'est la colonne à trier. Au prix limite exactement, le ratio vaut 1. Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite.
+
+Valeurs par défaut : XP total 1→100 `179 592`, croquette `13 920` kamas — soit un budget de montée de 5 M.
 
 La taxe HDV est fixée à **2 %** et s'applique partout, y compris au profit enregistré des sessions de forgemagie — dans l'outil d'origine, l'écran et l'historique affichaient deux montants différents pour la même session.
 
@@ -83,4 +93,5 @@ Vider les données de navigation efface la clé. **L'export est la seule copie d
 ## Sources
 
 Noms d'items, recettes, images et effets : [dofusdude](https://docs.dofusdu.de) (`api.dofusdu.de`, branche Dofus 3, langue française).
+Points d'entrée utilisés : `items/equipment` et `items/weapons` pour le Craft et la Forgemagie, `items/resources` et `items/consumables` pour les lignes de ressources. Les familiers n'ont pas de point d'entrée dédié — ce sont des `equipment` de type `Familier`, et l'API ne sachant pas filtrer par type, le tri se fait côté client.
 Table des runes de forgemagie et table d'XP des ressources : reprises telles quelles des outils d'origine.

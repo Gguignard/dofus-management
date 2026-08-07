@@ -443,7 +443,10 @@ select{cursor:pointer;appearance:none;padding-right:26px;
   </div>
 
   <div class="panel">
-    <div class="panel-hd"><h2>Ressources</h2><div class="spacer"></div><span class="eyebrow" id="cf-recipe-src"></span></div>
+    <div class="panel-hd"><h2>Ressources</h2><div class="spacer"></div>
+      <span class="eyebrow" id="cf-recipe-src"></span>
+      <button class="btn btn-sm" id="cf-lock" style="display:none"></button>
+    </div>
     <div class="panel-bd flush table-scroll">
       <table class="ledger">
         <thead><tr>
@@ -637,7 +640,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
 <section class="page" id="page-familier">
   <div class="page-hd">
     <h1>Familier</h1>
-    <p>Au-delà d'un certain prix, une ressource coûte plus cher que la croquette qu'elle remplace. Ce module te donne ce seuil.</p>
+    <p>Le prix d'une croquette fixe ce que vaut un point d'XP. Chaque ressource se compare à cet étalon : sous 1, elle te fait gagner de l'argent.</p>
   </div>
 
   <div class="panel">
@@ -647,21 +650,25 @@ select{cursor:pointer;appearance:none;padding-right:26px;
     <div class="panel-bd">
       <div class="grid grid-3">
         <div>
-          <div class="eyebrow" style="margin-bottom:5px">XP total 1 → 100</div>
-          <input type="number" id="fa-xptotal" min="1">
+          <div class="eyebrow" style="margin-bottom:5px">Prix d'une croquette</div>
+          <input type="number" id="fa-croqprice" min="0" placeholder="0">
         </div>
         <div>
           <div class="eyebrow" style="margin-bottom:5px">XP par croquette</div>
-          <input type="number" id="fa-xpcroq" min="1">
+          <div class="num" style="padding:7px 10px;border:1px solid var(--rule-soft);border-radius:var(--r);
+                                  background:var(--ink-3);color:var(--text-3);text-align:right">500</div>
         </div>
         <div>
-          <div class="eyebrow" style="margin-bottom:5px">Budget total (kamas)</div>
-          <input type="number" id="fa-budget" min="0">
+          <div class="eyebrow" style="margin-bottom:5px">XP total 1 → 100</div>
+          <input type="number" id="fa-xptotal" min="1">
         </div>
       </div>
-      <div class="grid grid-2" style="margin-top:14px">
+      <div class="grid grid-3" style="margin-top:14px">
+        <div class="kpi"><div class="lbl">Prix du point d'XP</div><div class="val num gold" id="fa-perxp">—</div>
+          <div class="foot">prix de la croquette ÷ 500 — c'est l'étalon</div></div>
         <div class="kpi"><div class="lbl">Croquettes nécessaires</div><div class="val num" id="fa-nbcroq">—</div></div>
-        <div class="kpi"><div class="lbl">Prix max par croquette</div><div class="val num gold" id="fa-prixcroq">—</div><div class="foot">c'est la base du prix limite</div></div>
+        <div class="kpi"><div class="lbl">Budget de la montée</div><div class="val num" id="fa-budget-val">—</div>
+          <div class="foot">croquettes × prix unitaire</div></div>
       </div>
     </div>
   </div>
@@ -701,7 +708,8 @@ select{cursor:pointer;appearance:none;padding-right:26px;
       <div class="panel-bd">
         <div class="row-flex" style="margin-bottom:10px">
           <input type="search" id="fa-search" placeholder="Chercher une ressource" style="max-width:320px">
-          <select id="fa-sort" style="width:190px">
+          <select id="fa-sort" style="width:230px">
+            <option value="ratio">Meilleures affaires d'abord</option>
             <option value="nom">Nom A→Z</option>
             <option value="xp-desc">XP décroissant</option>
             <option value="xp-asc">XP croissant</option>
@@ -718,7 +726,8 @@ select{cursor:pointer;appearance:none;padding-right:26px;
   <div class="sub sub-fa" id="sub-fa-favoris" style="display:none">
     <div class="panel">
       <div class="panel-hd"><h2>Favoris</h2><div class="spacer"></div><span class="eyebrow" id="fa-favcount"></span>
-        <select id="fa-favsort" style="width:190px">
+        <select id="fa-favsort" style="width:230px">
+          <option value="ratio">Meilleures affaires d'abord</option>
           <option value="nom">Nom A→Z</option>
           <option value="xp-desc">XP décroissant</option>
           <option value="prix-desc">Prix limite décroissant</option>
@@ -1074,7 +1083,7 @@ function blankState(){
     fmSessions: [],
     ventesEnCours: [],
     ventes:     [],
-    familier:   { xpTotal:179592, xpCroq:500, budget:5000000, marge:30,
+    familier:   { xpTotal:179592, prixCroq:13920, marge:30,
                   familiers:[], plan:[], favoris:[] },
     /* le travail en cours survit à un rechargement */
     draft:      { craft:null, fm:null },
@@ -1091,6 +1100,15 @@ function hydrate(raw){
   s.version    = SCHEMA_VERSION;
   s.settings   = { ...d.settings, ...(raw.settings||{}) };
   s.familier   = { ...d.familier, ...(raw.familier||{}) };
+  /* Ancien modele : un budget total pour la montee. Nouveau : le prix d'une
+     croquette. Les deux sont equivalents a 500 XP la croquette. */
+  if(raw.familier && raw.familier.prixCroq === undefined && raw.familier.budget){
+    /* parseFloat et pas num() : hydrate() tourne avant la section utilitaires */
+    const nb = (parseFloat(s.familier.xpTotal) || 179592) / 500;
+    s.familier.prixCroq = Math.round((parseFloat(raw.familier.budget) || 0) / nb);
+  }
+  delete s.familier.budget;
+  delete s.familier.xpCroq;
   s.draft      = { ...d.draft, ...(raw.draft||{}) };
   ['priceBook','runePrices','itemCache'].forEach(k=>{
     s[k] = (raw[k] && typeof raw[k]==='object' && !Array.isArray(raw[k])) ? raw[k] : {};
@@ -1518,30 +1536,46 @@ function coutCraft(rows){
 const CF = { sort:'recent', dir:'desc', folder:null };
 
 function cfDraft(){
-  if(!S.draft.craft) S.draft.craft = { id:null, name:'', img:'', rows:[], hdv:'', hdvV:'' };
+  if(!S.draft.craft) S.draft.craft = { id:null, name:'', img:'', rows:[], hdv:'', hdvV:'', locked:false };
   const d = S.draft.craft;
   if(!Array.isArray(d.rows)) d.rows = [];
   if(!d.rows.length) d.rows = Array.from({length:6}, () => ({ name:'', qty:1, prix:0, img:'' }));
   return d;
 }
 
-/* ─── tableau des ressources ─── */
+/* ─── tableau des ressources ───
+   Une recette vient du jeu : ses ingrédients et leurs quantités ne se
+   discutent pas. On les affiche en texte, seul le prix reste saisissable.
+   Les lignes ajoutées à la main, elles, restent entièrement modifiables. */
 function cfRenderRows(){
   const d = cfDraft();
+  const locked = r => d.locked && r.fromRecipe;
+
   $('#cf-rows').innerHTML = d.rows.map((r,i) => {
     const known = getPrice(r.name);
     const fromBook = known !== null && known === num(r.prix) && !!norm(r.name);
+    const nameCell = locked(r)
+      ? `<span>${esc(r.name)}</span>`
+      : `<input type="text" data-f="name" value="${esc(r.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false">`;
+    const qtyCell = locked(r)
+      ? `<span class="money">${fmt(num(r.qty))}</span>`
+      : `<input type="number" data-f="qty" min="0" value="${esc(r.qty)}" style="text-align:center">`;
     return `<tr data-i="${i}">
       <td>${thumbTag(r.img, 'thumb thumb-sm')}</td>
-      <td><input type="text" data-f="name" value="${esc(r.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false"></td>
-      <td class="r"><input type="number" data-f="qty" min="0" value="${esc(r.qty)}" style="text-align:center"></td>
+      <td>${nameCell}</td>
+      <td class="r">${qtyCell}</td>
       <td class="col-money"><input type="number" data-f="prix" min="0" value="${esc(r.prix)}"
             title="${fromBook ? 'Prix repris du référentiel' : ''}"
             style="${fromBook ? 'border-color:var(--gold-deep)' : ''}"></td>
       <td class="col-money"><span class="money dim" data-sub>${fmt(num(r.qty)*num(r.prix))}</span></td>
-      <td class="c"><button class="btn-icon" data-act="del" title="Supprimer la ligne">×</button></td>
+      <td class="c">${locked(r) ? '' : `<button class="btn-icon" data-act="del" title="Supprimer la ligne">×</button>`}</td>
     </tr>`;
   }).join('');
+
+  const btn = $('#cf-lock');
+  const hasRecipe = d.rows.some(r => r.fromRecipe);
+  btn.style.display = hasRecipe ? '' : 'none';
+  btn.textContent = d.locked ? 'Modifier la recette' : 'Reverrouiller';
   cfCalc();
 }
 
@@ -1629,10 +1663,12 @@ async function cfPickItem(item){
   }
   if(recipe){
     const rows = await Promise.all(recipe.map(resolveIngredient));
-    d.rows = rows.map(r => ({ name:r.name, qty:r.qty, prix:getPrice(r.name) ?? 0, img:r.img }));
+    d.rows = rows.map(r => ({ name:r.name, qty:r.qty, prix:getPrice(r.name) ?? 0, img:r.img, fromRecipe:true }));
+    d.locked = true;
     $('#cf-recipe-src').textContent = `${rows.length} ingrédients · via dofusdude`;
   } else {
     d.rows = [];
+    d.locked = false;
     $('#cf-recipe-src').textContent = 'Aucune recette connue — à saisir';
   }
   commit(); cfRenderRows();
@@ -1647,7 +1683,7 @@ function cfPaintItem(){
 }
 
 function cfReset(){
-  S.draft.craft = { id:null, name:'', img:'', rows:[], hdv:'', hdvV:'' };
+  S.draft.craft = { id:null, name:'', img:'', rows:[], hdv:'', hdvV:'', locked:false };
   commit();
   $('#cf-recipe-src').textContent = '';
   cfPaintItem(); cfRenderRows();
@@ -1666,7 +1702,7 @@ function cfSave(){
   const rec = {
     id: existing ? existing.id : uid(),
     name, img: d.img || (existing && existing.img) || '',
-    rows: rows.map(r => ({ name:r.name.trim(), qty:num(r.qty), prix:num(r.prix), img:r.img||'' })),
+    rows: rows.map(r => ({ name:r.name.trim(), qty:num(r.qty), prix:num(r.prix), img:r.img||'', fromRecipe:!!r.fromRecipe })),
     hdvMarche: num(d.hdv), hdvVendeur: num(d.hdvV),
     dossierId: existing ? existing.dossierId : (CF.folder || null),
     createdAt: existing ? existing.createdAt : Date.now(),
@@ -1685,7 +1721,8 @@ function cfLoad(id){
   S.draft.craft = {
     id: c.id, name: c.name, img: c.img || '',
     rows: c.rows.map(r => ({ ...r })),
-    hdv: c.hdvMarche || '', hdvV: c.hdvVendeur || ''
+    hdv: c.hdvMarche || '', hdvV: c.hdvVendeur || '',
+    locked: c.rows.some(r => r.fromRecipe)
   };
   commit();
   $('#cf-recipe-src').textContent = 'Craft enregistré';
@@ -1817,7 +1854,7 @@ function renderCraftSaves(){
 function initCraft(){
   bindAutocomplete({
     root:'#cf-name', selector:'input',
-    kinds:['equipment','weapons','resources'],
+    kinds:['equipment','weapons'],
     onPick:(input, item) => cfPickItem(item)
   });
   /* chaque ligne de ressource cherche dans le catalogue */
@@ -1872,6 +1909,12 @@ function initCraft(){
   });
 
   $('#cf-add').addEventListener('click', () => cfAddRow());
+  $('#cf-lock').addEventListener('click', () => {
+    const d = cfDraft();
+    d.locked = !d.locked;
+    commit(); cfRenderRows();
+    toast(d.locked ? 'Recette reverrouillée' : 'Recette déverrouillée — à toi de jouer', 'warn');
+  });
   $('#cf-save').addEventListener('click', cfSave);
   $('#cf-reset').addEventListener('click', cfReset);
   $('#cf-sell').addEventListener('click', () => sellFromCraft());
@@ -2447,7 +2490,7 @@ function renderPrixRunes(){
 
 /* ═══════════════ §9 · FAMILIER ═══════════════ */
 
-const FA = { zone:'Toutes', sort:'nom', favSort:'nom' };
+const FA = { zone:'Toutes', sort:'ratio', favSort:'ratio' };
 
 /* Une ressource peut apparaître dans plusieurs zones : on retient la première. */
 const ZONE_OF = {};
@@ -2471,22 +2514,47 @@ const FAM_RES = (() => {
   return FAM_ALL.concat(extra);
 })();
 
-const famMult      = () => S.settings.almanax ? 1.5 : 1;
-const famNbCroq    = () => num(S.familier.xpTotal) / Math.max(1, num(S.familier.xpCroq));
-const famPrixCroq  = () => num(S.familier.budget) / Math.max(1e-9, famNbCroq());
-const famQte       = xp => num(S.familier.xpCroq) / (xp * famMult());
-const famPrixLimite = xp => famPrixCroq() / famQte(xp);
+/* Une croquette vaut toujours 500 XP : c'est une constante du jeu, pas un
+   reglage. Tout part du prix que tu paies une croquette.
+
+     prix du point d'XP  = prix croquette / 500        <- l'etalon
+     prix limite         = XP ressource x etalon       <- ne paie pas plus
+     prix/XP ressource   = prix ressource / XP ressource
+     ratio               = prix/XP ressource / etalon  <- sous 1, elle vaut mieux
+
+   L'Almanax multiplie l'XP rendue par les ressources, pas celle des
+   croquettes : il gonfle donc l'XP effective de la ressource. */
+const XP_CROQUETTE = 500;
+
+const famMult       = () => S.settings.almanax ? 1.5 : 1;
+const famPrixCroq   = () => num(S.familier.prixCroq);
+const famPrixParXp  = () => famPrixCroq() / XP_CROQUETTE;
+const famNbCroq     = () => num(S.familier.xpTotal) / XP_CROQUETTE;
+const famBudget     = () => famNbCroq() * famPrixCroq();
+const famXpEff      = xp => xp * famMult();
+const famPrixLimite = xp => famXpEff(xp) * famPrixParXp();
+const famPrixParXpRes = (xp, prix) => (prix === null || !xp) ? null : prix / famXpEff(xp);
+const famRatio = (xp, prix) => {
+  const pxr = famPrixParXpRes(xp, prix), etalon = famPrixParXp();
+  return (pxr === null || etalon <= 0) ? null : pxr / etalon;
+};
+const fmtRatio = r => r === null ? '\u2014' : r.toFixed(2).replace('.', ',') + ' \u00d7';
 
 function renderFamParams(){
   const f = S.familier;
-  $('#fa-xptotal').value = f.xpTotal;
-  $('#fa-xpcroq').value  = f.xpCroq;
-  $('#fa-budget').value  = f.budget;
-  $('#fa-nbcroq').textContent   = fmtDec(famNbCroq());
-  $('#fa-prixcroq').textContent = fmt(famPrixCroq());
+  $('#fa-xptotal').value   = f.xpTotal;
+  $('#fa-croqprice').value = f.prixCroq;
+  renderFamEtalon();
   classToggle($('#fa-almanax'), 'on', S.settings.almanax);
   $('#fa-marge').value = f.marge;
   $('#fa-marge-val').textContent = f.marge + ' %';
+}
+
+function renderFamEtalon(){
+  const px = famPrixParXp();
+  $('#fa-perxp').textContent      = px > 0 ? fmtDec(px, 2) : '\u2014';
+  $('#fa-nbcroq').textContent     = fmtDec(famNbCroq());
+  $('#fa-budget-val').textContent = famPrixCroq() > 0 ? fmt(famBudget()) : '\u2014';
 }
 
 /* ─── prix de référence ─── */
@@ -2553,6 +2621,9 @@ function famFiltered(source, sort, query, useZone = true){
   else if(sort === 'xp-asc')    data.sort((a,b) => a.xp - b.xp);
   else if(sort === 'prix-desc') data.sort((a,b) => famPrixLimite(b.xp) - famPrixLimite(a.xp));
   else if(sort === 'prix-asc')  data.sort((a,b) => famPrixLimite(a.xp) - famPrixLimite(b.xp));
+  /* meilleures affaires d'abord, ressources sans prix relevé à la fin */
+  else if(sort === 'ratio') data.sort((a,b) =>
+    (famRatio(a.xp, getPrice(a.nom)) ?? Infinity) - (famRatio(b.xp, getPrice(b.nom)) ?? Infinity));
   else data.sort((a,b) => a.nom.localeCompare(b.nom,'fr'));
   return data;
 }
@@ -2560,21 +2631,23 @@ function famFiltered(source, sort, query, useZone = true){
 function famRowsHtml(data){
   const favs = new Set(S.familier.favoris);
   return data.map(r => {
-    const lim = famPrixLimite(r.xp);
-    const hdv = getPrice(r.nom);
-    const marge = hdv !== null ? lim - hdv : null;
-    const pct = (marge !== null && lim > 0) ? marge/lim*100 : null;
+    const lim   = famPrixLimite(r.xp);
+    const hdv   = getPrice(r.nom);
+    const pxr   = famPrixParXpRes(r.xp, hdv);
+    const ratio = famRatio(r.xp, hdv);
+    const tone  = ratio === null ? 'dim' : ratio < 1 ? 'credit' : ratio > 1 ? 'debit' : 'gold';
+    const verdict = ratio === null ? '' : ratio < 1 ? 'moins chère' : ratio > 1 ? 'plus chère' : 'équivalente';
     const isFav = favs.has(r.nom);
     return `<tr data-nom="${esc(r.nom)}">
       <td class="c"><button class="btn-icon" data-act="fav" title="${isFav ? 'Retirer des favoris' : 'Mettre en favori'}"
             style="color:${isFav ? 'var(--gold)' : 'var(--text-3)'}">${isFav ? '★' : '☆'}</button></td>
       <td>${esc(r.nom)}<div style="font-size:11px;color:var(--text-3)">${esc(ZONE_OF[norm(r.nom)] || '')}</div></td>
       <td class="r"><span class="money dim">${fmtDec(r.xp)}</span></td>
-      <td class="r"><span class="money dim">${fmtDec(famQte(r.xp))}</span></td>
       <td class="col-money">${moneyCell(lim, 'gold')}</td>
       <td class="col-money"><input type="number" min="0" data-f="hdv" value="${hdv === null ? '' : hdv}" placeholder="—"></td>
-      <td class="col-money">${marge === null ? '<span class="money dim">—</span>'
-        : `${signedCell(marge)}<span class="unit">${fmtPct(pct)}</span>`}</td>
+      <td class="col-money"><span class="money ${pxr === null ? 'dim' : ''}">${pxr === null ? '—' : fmtDec(pxr, 2)}</span></td>
+      <td class="col-money"><span class="money ${tone}">${fmtRatio(ratio)}</span>
+        ${verdict ? `<div style="font-size:11px;color:var(--text-3)">${verdict}</div>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -2582,11 +2655,11 @@ function famRowsHtml(data){
 const FAM_HEAD =
   `<thead><tr>
      <th style="width:40px"></th><th>Ressource</th>
-     <th class="r" style="width:90px">XP</th>
-     <th class="r" style="width:90px">Qté</th>
-     <th class="r col-money" style="width:130px">Prix limite</th>
-     <th class="r col-money" style="width:130px">Prix HDV</th>
-     <th class="r col-money" style="width:160px">Marge</th>
+     <th class="r" style="width:80px">XP</th>
+     <th class="r col-money" style="width:125px">Prix limite</th>
+     <th class="r col-money" style="width:125px">Prix HDV</th>
+     <th class="r col-money" style="width:110px">Prix / XP</th>
+     <th class="r col-money" style="width:140px">vs croquette</th>
    </tr></thead>`;
 
 function renderFamList(){
@@ -2702,13 +2775,11 @@ function initFamilier(){
   const onParam = (sel, key) => $(sel).addEventListener('input', e => {
     S.familier[key] = num(e.target.value);
     commit();
-    $('#fa-nbcroq').textContent   = fmtDec(famNbCroq());
-    $('#fa-prixcroq').textContent = fmt(famPrixCroq());
+    renderFamEtalon();
     renderFamList(); renderFamFavs();
   });
   onParam('#fa-xptotal','xpTotal');
-  onParam('#fa-xpcroq','xpCroq');
-  onParam('#fa-budget','budget');
+  onParam('#fa-croqprice','prixCroq');
 
   $('#fa-almanax').addEventListener('click', () => {
     S.settings.almanax = !S.settings.almanax;
@@ -2723,10 +2794,11 @@ function initFamilier(){
   });
   $('#fa-apply').addEventListener('click', () => {
     if(!FA.prixRef || FA.prixRef <= 0) return;
-    S.familier.budget = Math.round(FA.prixRef);
+    /* le budget total de la montée se ramène au prix unitaire de la croquette */
+    S.familier.prixCroq = Math.round(FA.prixRef / Math.max(1e-9, famNbCroq()));
     commit(); renderFamParams(); renderFamList(); renderFamFavs();
     goSub('fa','liste');
-    toast(`Budget fixé à ${fmt(S.familier.budget)} kamas`);
+    toast(`Croquette plafonnée à ${fmt(S.familier.prixCroq)} kamas`);
   });
 
   $('#fa-add-familier').addEventListener('click', () => {
