@@ -27,7 +27,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 | **Bilan** | Solde cumulé, chiffre d'affaires net, rentabilité moyenne, capital immobilisé en vente, meilleures marges par item |
 | **Craft** | Recherche d'équipement, recette remplie automatiquement et verrouillée, coût des ressources, comparaison prix marché / ton prix, dossiers |
 | **Forgemagie** | Relevé des prix de runes, arbitrage acheter-ou-crafter, session de forge avec coût des runes et ROI |
-| **Familier** | Ratio de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
+| **Familier** | Rentabilité de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
 | **Prix** | Le référentiel commun : ressources et runes au même endroit |
 | **Ventes** | File des items en vente (venus du Craft ou de la Forge), puis registre des ventes conclues |
 | **Données** | Export, import, réinitialisation |
@@ -54,10 +54,14 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 prix du point d'XP  = prix d'une croquette ÷ 500
 prix limite         = XP de la ressource × prix du point d'XP
 prix / XP ressource = prix de la ressource ÷ XP de la ressource
-ratio vs croquette  = prix/XP ressource ÷ prix du point d'XP
+rentabilité         = prix du point d'XP ÷ prix/XP ressource
 ```
 
-La colonne « Coût vs croquette » affiche ce ratio **en pourcentage** : à 100 % la ressource coûte exactement le prix de la croquette pour la même XP, **en dessous elle nourrit moins cher**. C'est la colonne à trier. Au prix limite exactement, le ratio vaut 1. Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite.
+La colonne « vs croquette » donne le **rapport de force** : si le point d'XP te revient à 10 kamas en croquette et à 1 kama avec la ressource, elle affiche **10 × plus rentable**. Au-delà du prix limite, elle bascule en rouge et compte à l'envers — « 2 × moins rentable ». C'est la colonne à trier.
+
+Le facteur affiché est toujours supérieur à 1 : ce sont le mot et la couleur qui donnent le sens. Une ressource dix fois trop chère lit mieux en « 10 × moins rentable » qu'en « 0,1 × ». Le tri s'appuie sur la valeur brute, il reste donc exact même quand l'affichage arrondit.
+
+Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite et leur rentabilité.
 
 Valeurs par défaut : XP total 1→100 `179 592`, croquette `13 920` kamas — soit un budget de montée de 5 M.
 

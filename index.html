@@ -2538,21 +2538,29 @@ const famRatio = (xp, prix) => {
   const pxr = famPrixParXpRes(xp, prix), etalon = famPrixParXp();
   return (pxr === null || etalon <= 0) ? null : pxr / etalon;
 };
-/* Le ratio s'affiche en pourcentage du prix de la croquette, a XP egale :
-   100 % = meme cout, en dessous = la ressource nourrit moins cher. La
-   precision suit l'ordre de grandeur, sinon une ressource tres bon marche
-   retomberait a « 0,00 ». Le tri, lui, s'appuie sur le ratio brut. */
-function ratioLabel(r){
-  if(r === null || !isFinite(r)) return { txt:'\u2014', tone:'dim', note:'' };
-  const pct = r * 100;
-  const txt = (pct >= 1000 ? Math.round(pct).toLocaleString('fr-FR')
-             : pct >= 10   ? pct.toFixed(1).replace('.', ',')
-             : pct >= 1    ? pct.toFixed(1).replace('.', ',')
-             : pct >= 0.01 ? pct.toFixed(2).replace('.', ',')
-                           : pct.toFixed(3).replace('.', ',')) + ' %';
-  if(Math.abs(r - 1) < 0.005) return { txt, tone:'gold', note:'\u00e9quivalente' };
-  return { txt, tone: r < 1 ? 'credit' : 'debit',
-           note: r < 1 ? 'moins ch\u00e8re' : 'plus ch\u00e8re' };
+/* Le rapport de force : combien de fois la ressource rend l'XP moins chere
+   que la croquette. Croquette a 10 kamas le point d'XP, ressource a 1 kama
+   -> 10, soit dix fois plus rentable. C'est l'inverse du ratio de cout. */
+const famRentabilite = (xp, prix) => {
+  const pxr = famPrixParXpRes(xp, prix), etalon = famPrixParXp();
+  return (pxr === null || pxr <= 0 || etalon <= 0) ? null : etalon / pxr;
+};
+/* On affiche toujours un facteur superieur a 1 : c'est le mot et la couleur
+   qui donnent le sens. Une ressource deux fois trop chere se lit
+   « 2 x moins rentable » plutot que « 0,5 x », illisible aux extremes.
+   Le tri, lui, s'appuie sur la valeur brute. */
+function facteur(f){
+  return f >= 100 ? Math.round(f).toLocaleString('fr-FR')
+       : f >= 10  ? f.toFixed(1).replace('.', ',')
+                  : f.toFixed(2).replace('.', ',');
+}
+function rentabiliteLabel(x){
+  if(x === null || !isFinite(x) || x <= 0) return { txt:'\u2014', tone:'dim', note:'' };
+  if(Math.abs(x - 1) < 0.005)
+    return { txt:'1,00 \u00d7', tone:'gold', note:'m\u00eame rendement' };
+  return x > 1
+    ? { txt: facteur(x)     + ' \u00d7', tone:'credit', note:'plus rentable' }
+    : { txt: facteur(1 / x) + ' \u00d7', tone:'debit',  note:'moins rentable' };
 }
 
 function renderFamParams(){
@@ -2649,8 +2657,7 @@ function famRowsHtml(data){
     const lim   = famPrixLimite(r.xp);
     const hdv   = getPrice(r.nom);
     const pxr   = famPrixParXpRes(r.xp, hdv);
-    const ratio = famRatio(r.xp, hdv);
-    const rl    = ratioLabel(ratio);
+    const rl    = rentabiliteLabel(famRentabilite(r.xp, hdv));
     const isFav = favs.has(r.nom);
     return `<tr data-nom="${esc(r.nom)}">
       <td class="c"><button class="btn-icon" data-act="fav" title="${isFav ? 'Retirer des favoris' : 'Mettre en favori'}"
@@ -2673,7 +2680,7 @@ const FAM_HEAD =
      <th class="r col-money" style="width:125px">Prix limite</th>
      <th class="r col-money" style="width:125px">Prix HDV</th>
      <th class="r col-money" style="width:110px">Prix / XP</th>
-     <th class="r col-money" style="width:150px">Coût vs croquette</th>
+     <th class="r col-money" style="width:165px">vs croquette</th>
    </tr></thead>`;
 
 function renderFamList(){
