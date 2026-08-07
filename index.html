@@ -268,6 +268,9 @@ select{cursor:pointer;appearance:none;padding-right:26px;
 .note strong{color:var(--text)}
 .note.gold{border-left-color:var(--gold)}
 .thumb{width:34px;height:34px;object-fit:contain;border-radius:4px;background:var(--ink);border:1px solid var(--rule-soft);flex-shrink:0}
+/* Sans image, la vignette réserve sa place sans dessiner de cadre —
+   un cadre vide se lit comme une case à cocher. */
+.thumb-empty{border-color:transparent;background:none}
 .thumb-sm{width:26px;height:26px}
 .thumb-lg{width:52px;height:52px}
 .row-flex{display:flex;align-items:center;gap:10px}
@@ -277,8 +280,10 @@ select{cursor:pointer;appearance:none;padding-right:26px;
 
 /* ─── autocomplétion ─── */
 .search-wrap{position:relative;flex:1;min-width:0}
+/* Position fixe et ancrage calculé : un panneau parent en overflow:hidden
+   ne peut pas la rogner, et elle passe au-dessus de tout le reste. */
 .suggest{
-  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:80;display:none;
+  position:fixed;z-index:120;display:none;
   background:var(--ink-3);border:1px solid var(--rule);border-radius:var(--r);
   max-height:290px;overflow-y:auto;box-shadow:0 12px 32px rgba(0,0,0,.6);
 }
@@ -431,8 +436,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
       <div class="row-flex">
         <img class="thumb thumb-lg" id="cf-img" alt="" style="display:none">
         <div class="search-wrap">
-          <input type="text" id="cf-name" placeholder="Chercher un item (ex : Cape de Glourdorak)" autocomplete="off">
-          <div class="suggest" id="cf-suggest"></div>
+          <input type="text" id="cf-name" placeholder="Chercher un item (ex : Cape de Glourdorak)" autocomplete="off" spellcheck="false">
         </div>
       </div>
     </div>
@@ -568,8 +572,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
         <div class="row-flex" style="margin-bottom:12px">
           <img class="thumb thumb-lg" id="fm-item-img" alt="" style="display:none">
           <div class="search-wrap">
-            <input type="text" id="fm-item-name" placeholder="Chercher l'item à forger" autocomplete="off">
-            <div class="suggest" id="fm-item-suggest"></div>
+            <input type="text" id="fm-item-name" placeholder="Chercher l'item à forger" autocomplete="off" spellcheck="false">
           </div>
         </div>
         <div id="fm-item-stats" style="display:none;margin-bottom:12px"></div>
@@ -1181,7 +1184,7 @@ function classToggle(el, cls, on){ if(el) el.classList.toggle(cls, !!on); }
 function thumbTag(src, cls = 'thumb'){
   return src
     ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`
-    : `<span class="${cls}" style="display:inline-block"></span>`;
+    : `<span class="${cls} thumb-empty" style="display:inline-block"></span>`;
 }
 function moneyCell(v, tone = ''){
   return `<span class="money ${tone}">${fmt(v)}</span>`;
@@ -1266,11 +1269,11 @@ function itemImg(item){
   return (item && item.image_urls && (item.image_urls.icon || item.image_urls.sd || item.image_urls.hq)) || '';
 }
 
-async function apiSearch(query, kinds = ['equipment','weapons','resources']){
+async function apiSearch(query, kinds = ['equipment','weapons','resources'], limit = 6){
   if(API_OFFLINE) return [];
   const q = encodeURIComponent(query);
   const lists = await Promise.all(kinds.map(k =>
-    fetch(`${API}/${k}/search?query=${q}&limit=6`).then(r => r.ok ? r.json() : []).catch(() => [])
+    fetch(`${API}/${k}/search?query=${q}&limit=${limit}`).then(r => r.ok ? r.json() : []).catch(() => [])
   ));
   const seen = new Set(), out = [];
   lists.flat().forEach(it => {
@@ -1317,53 +1320,123 @@ async function resolveIngredient(ing){
   return d ? { name: d.name, qty, img: d.img } : { name: 'Ressource inconnue', qty, img: '' };
 }
 
-/* Autocomplétion partagée par Craft et Forgemagie. */
-function attachSearch(inputSel, boxSel, onPick, kinds){
-  const input = $(inputSel), box = $(boxSel);
-  if(!input || !box) return;
-  let timer = null, results = [], idx = -1;
+/* ─── autocomplétion ───
+   Une seule boîte pour toute l'application, ancrée en position fixe sur le
+   champ actif. Le branchement se fait par délégation : les lignes de
+   ressources et de familiers sont réécrites en permanence, un écouteur posé
+   sur un champ précis ne survivrait pas au premier rendu. */
+const AC = { input:null, cfg:null, results:[], idx:-1, timer:null, box:null };
 
-  const close = () => { box.classList.remove('open'); idx = -1; };
-  const paint = () => {
-    if(!results.length){ box.innerHTML = `<div class="msg">Aucun résultat</div>`; return; }
-    box.innerHTML = results.map((it,i) =>
-      `<div class="item${i === idx ? ' on' : ''}" data-i="${i}">
-         ${thumbTag(itemImg(it), 'thumb thumb-sm')}
-         <span class="nm">${esc(it.name)}</span>
-         <span class="ty">${esc((it.type && it.type.name) || '')}</span>
-         <span class="lv">${it.level ? 'niv ' + it.level : ''}</span>
-       </div>`).join('') + `<div class="src">via dofusdude</div>`;
-  };
-
-  input.addEventListener('input', () => {
-    const v = input.value.trim();
-    clearTimeout(timer);
-    if(v.length < 3){ close(); return; }
-    if(API_OFFLINE){
-      box.innerHTML = `<div class="msg">Recherche indisponible hors serveur — saisis le nom et les ressources à la main.</div>`;
-      box.classList.add('open');
-      return;
-    }
-    box.innerHTML = `<div class="msg">Recherche…</div>`;
-    box.classList.add('open');
-    timer = setTimeout(async () => {
-      results = await apiSearch(v, kinds);
-      idx = -1;
-      paint();
-    }, 320);
-  });
-
-  input.addEventListener('keydown', e => {
-    if(!box.classList.contains('open')) return;
-    if(e.key === 'ArrowDown'){ e.preventDefault(); idx = Math.min(idx + 1, results.length - 1); paint(); }
-    else if(e.key === 'ArrowUp'){ e.preventDefault(); idx = Math.max(idx - 1, 0); paint(); }
-    else if(e.key === 'Enter' && idx >= 0){ e.preventDefault(); close(); onPick(results[idx]); }
-    else if(e.key === 'Escape'){ close(); }
-  });
-
-  delegate(box, 'click', '.item', (e, el) => { close(); onPick(results[+el.dataset.i]); });
-  document.addEventListener('click', e => { if(!e.target.closest(inputSel) && !e.target.closest(boxSel)) close(); });
+function acBox(){
+  if(!AC.box){
+    AC.box = document.createElement('div');
+    AC.box.className = 'suggest';
+    AC.box.id = 'ac-box';
+    document.body.appendChild(AC.box);
+    /* mousedown plutôt que click : le champ ne perd pas le focus avant le choix */
+    AC.box.addEventListener('mousedown', e => {
+      const it = e.target.closest('.item');
+      if(!it) return;
+      e.preventDefault();
+      acPick(+it.dataset.i);
+    });
+  }
+  return AC.box;
 }
+
+function acPlace(){
+  if(!AC.input) return;
+  const r = AC.input.getBoundingClientRect();
+  const box = acBox();
+  const below = window.innerHeight - r.bottom;
+  box.style.left  = Math.max(8, Math.min(r.left, window.innerWidth - 280)) + 'px';
+  box.style.width = Math.max(r.width, 280) + 'px';
+  if(below < 200 && r.top > below){        /* pas la place dessous : on ouvre vers le haut */
+    box.style.top = 'auto';
+    box.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+    box.style.maxHeight = Math.min(290, r.top - 12) + 'px';
+  } else {
+    box.style.bottom = 'auto';
+    box.style.top = (r.bottom + 4) + 'px';
+    box.style.maxHeight = Math.min(290, below - 12) + 'px';
+  }
+}
+
+function acClose(){
+  if(AC.box) AC.box.classList.remove('open');
+  AC.input = null; AC.idx = -1;
+  clearTimeout(AC.timer);
+}
+
+function acMsg(html){
+  const box = acBox();
+  box.innerHTML = `<div class="msg">${html}</div>`;
+  box.classList.add('open');
+  acPlace();
+}
+
+function acPaint(){
+  const box = acBox();
+  box.innerHTML = AC.results.length
+    ? AC.results.map((it,i) =>
+        `<div class="item${i === AC.idx ? ' on' : ''}" data-i="${i}">
+           ${thumbTag(itemImg(it), 'thumb thumb-sm')}
+           <span class="nm">${esc(it.name)}</span>
+           <span class="ty">${esc((it.type && it.type.name) || '')}</span>
+           <span class="lv">${it.level ? 'niv ' + it.level : ''}</span>
+         </div>`).join('') + `<div class="src">via dofusdude</div>`
+    : `<div class="msg">Aucun résultat</div>`;
+  box.classList.add('open');
+  acPlace();
+}
+
+function acPick(i){
+  const item = AC.results[i], input = AC.input, cfg = AC.cfg;
+  acClose();
+  if(item && cfg) cfg.onPick(input, item);
+}
+
+function acInput(input, cfg){
+  AC.input = input; AC.cfg = cfg;
+  const v = input.value.trim();
+  clearTimeout(AC.timer);
+  if(v.length < (cfg.minLen || 3)){ acClose(); return; }
+  if(API_OFFLINE){
+    acMsg('Recherche indisponible hors serveur — saisis le nom à la main.');
+    return;
+  }
+  acMsg('Recherche…');
+  AC.timer = setTimeout(async () => {
+    if(AC.input !== input) return;             /* le focus a changé entre-temps */
+    const raw = await apiSearch(v, cfg.kinds, cfg.limit || 6);
+    if(AC.input !== input) return;
+    AC.results = (cfg.filter ? raw.filter(cfg.filter) : raw).slice(0, 8);
+    AC.idx = -1;
+    acPaint();
+  }, 320);
+}
+
+function acKey(e){
+  if(!AC.box || !AC.box.classList.contains('open')) return;
+  if(e.key === 'ArrowDown'){ e.preventDefault(); AC.idx = Math.min(AC.idx + 1, AC.results.length - 1); acPaint(); }
+  else if(e.key === 'ArrowUp'){ e.preventDefault(); AC.idx = Math.max(AC.idx - 1, 0); acPaint(); }
+  else if(e.key === 'Enter' && AC.idx >= 0){ e.preventDefault(); acPick(AC.idx); }
+  else if(e.key === 'Escape'){ acClose(); }
+}
+
+/* {root, selector, kinds, limit, filter, minLen, onPick(input, item)} */
+function bindAutocomplete(cfg){
+  const root = typeof cfg.root === 'string' ? $(cfg.root) : cfg.root;
+  if(!root) return;
+  delegate(root, 'input',   cfg.selector, (e, input) => acInput(input, cfg));
+  delegate(root, 'keydown', cfg.selector, e => acKey(e));
+}
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('#ac-box') && e.target !== AC.input) acClose();
+});
+window.addEventListener('resize', () => AC.input && acPlace());
+window.addEventListener('scroll', () => AC.input && acPlace(), true);
 
 /* ═══════════════ §5 · RÉFÉRENTIEL DE PRIX ═══════════════ */
 
@@ -1460,7 +1533,7 @@ function cfRenderRows(){
     const fromBook = known !== null && known === num(r.prix) && !!norm(r.name);
     return `<tr data-i="${i}">
       <td>${thumbTag(r.img, 'thumb thumb-sm')}</td>
-      <td><input type="text" data-f="name" value="${esc(r.name)}" placeholder="Nom de la ressource"></td>
+      <td><input type="text" data-f="name" value="${esc(r.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false"></td>
       <td class="r"><input type="number" data-f="qty" min="0" value="${esc(r.qty)}" style="text-align:center"></td>
       <td class="col-money"><input type="number" data-f="prix" min="0" value="${esc(r.prix)}"
             title="${fromBook ? 'Prix repris du référentiel' : ''}"
@@ -1742,7 +1815,25 @@ function renderCraftSaves(){
 
 /* ─── câblage ─── */
 function initCraft(){
-  attachSearch('#cf-name', '#cf-suggest', cfPickItem, ['equipment','weapons','resources']);
+  bindAutocomplete({
+    root:'#cf-name', selector:'input',
+    kinds:['equipment','weapons','resources'],
+    onPick:(input, item) => cfPickItem(item)
+  });
+  /* chaque ligne de ressource cherche dans le catalogue */
+  bindAutocomplete({
+    root:'#cf-rows', selector:'input[data-f="name"]',
+    kinds:['resources','consumables','equipment'],
+    onPick:(input, item) => {
+      const row = cfDraft().rows[+input.closest('tr').dataset.i];
+      if(!row) return;
+      row.name = item.name;
+      row.img  = itemImg(item);
+      const known = getPrice(item.name);
+      if(known !== null) row.prix = known;
+      commit(); cfRenderRows();
+    }
+  });
 
   $('#cf-name').addEventListener('input', e => {
     cfDraft().name = e.target.value; commit();
@@ -1759,7 +1850,13 @@ function initCraft(){
     if(f === 'name'){
       row.name = input.value;
       const known = getPrice(row.name);
-      if(known !== null && num(row.prix) === 0){ row.prix = known; commit(); cfRenderRows(); return; }
+      if(known !== null && num(row.prix) === 0){
+        /* on remplit la cellule sans redessiner la ligne : redessiner
+           pendant la frappe ferait perdre le focus */
+        row.prix = known;
+        const pInput = input.closest('tr').querySelector('input[data-f="prix"]');
+        if(pInput) pInput.value = known;
+      }
     } else if(f === 'qty'){ row.qty = input.value === '' ? '' : num(input.value); }
     else if(f === 'prix'){
       row.prix = input.value === '' ? '' : num(input.value);
@@ -2271,7 +2368,11 @@ function renderFmSessions(){
 
 /* ─── câblage ─── */
 function initFm(){
-  attachSearch('#fm-item-name', '#fm-item-suggest', fmPickItem, ['equipment','weapons']);
+  bindAutocomplete({
+    root:'#fm-item-name', selector:'input',
+    kinds:['equipment','weapons'],
+    onPick:(input, item) => fmPickItem(item)
+  });
   fmAddSelect();
 
   $('#fm-item-name').addEventListener('input', e => { fmDraft().itemName = e.target.value; commit(); });
@@ -2404,7 +2505,7 @@ function renderFamiliers(){
       const diff = num(r.vente) - num(r.achat);
       const active = num(r.achat) > 0 || num(r.vente) > 0;
       return `<tr data-i="${i}">
-        <td><input type="text" data-f="nom" value="${esc(r.nom)}" placeholder="ex : Kanigloups"></td>
+        <td><input type="text" data-f="nom" value="${esc(r.nom)}" placeholder="Chercher un familier" autocomplete="off" spellcheck="false"></td>
         <td class="col-money"><input type="number" min="0" data-f="achat" value="${esc(r.achat)}" placeholder="0"></td>
         <td class="col-money"><input type="number" min="0" data-f="vente" value="${esc(r.vente)}" placeholder="0"></td>
         <td class="col-money">${active ? signedCell(diff) : '<span class="money dim">—</span>'}</td>
@@ -2533,7 +2634,7 @@ function renderFamPlan(){
       const benef = q * (num(r.vente) - num(r.achat) - num(r.cout));
       const active = q > 0 && (num(r.achat) > 0 || num(r.vente) > 0);
       return `<tr data-i="${i}">
-        <td><input type="text" data-f="nom" value="${esc(r.nom)}" placeholder="ex : Kokulte"></td>
+        <td><input type="text" data-f="nom" value="${esc(r.nom)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false"></td>
         <td class="r"><input type="number" min="0" data-f="qte" value="${esc(r.qte)}" placeholder="0" style="text-align:center"></td>
         <td class="col-money"><input type="number" min="0" data-f="achat" value="${esc(r.achat)}" placeholder="0"></td>
         <td class="col-money"><input type="number" min="0" data-f="cout" value="${esc(r.cout)}" placeholder="0"></td>
@@ -2574,6 +2675,30 @@ function renderFamilier(){
 
 /* ─── câblage ─── */
 function initFamilier(){
+  /* Les familiers sont des équipements de type « Familier » côté API, et
+     l'API ne sait pas filtrer par type : on ratisse large puis on trie ici. */
+  bindAutocomplete({
+    root:'#fa-familiers', selector:'input[data-f="nom"]',
+    kinds:['equipment'], limit:24,
+    filter: it => /familier/i.test((it.type && it.type.name) || ''),
+    onPick:(input, item) => {
+      const r = S.familier.familiers[+input.closest('tr').dataset.i];
+      if(!r) return;
+      r.nom = item.name;
+      commit(); renderFamiliers();
+    }
+  });
+  bindAutocomplete({
+    root:'#fa-plan', selector:'input[data-f="nom"]',
+    kinds:['resources','consumables'],
+    onPick:(input, item) => {
+      const r = S.familier.plan[+input.closest('tr').dataset.i];
+      if(!r) return;
+      r.nom = item.name;
+      commit(); renderFamPlan();
+    }
+  });
+
   const onParam = (sel, key) => $(sel).addEventListener('input', e => {
     S.familier[key] = num(e.target.value);
     commit();
