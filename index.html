@@ -2538,20 +2538,21 @@ const famRatio = (xp, prix) => {
   const pxr = famPrixParXpRes(xp, prix), etalon = famPrixParXp();
   return (pxr === null || etalon <= 0) ? null : pxr / etalon;
 };
-/* Le ratio brut devient illisible aux extremes : une ressource 2000 fois
-   moins chere que la croquette donne 0,0005, que deux decimales ecrasent a
-   zero. On affiche donc le facteur dans le sens qui se lit, et on garde le
-   ratio brut pour le tri. */
+/* Le ratio s'affiche en pourcentage du prix de la croquette, a XP egale :
+   100 % = meme cout, en dessous = la ressource nourrit moins cher. La
+   precision suit l'ordre de grandeur, sinon une ressource tres bon marche
+   retomberait a « 0,00 ». Le tri, lui, s'appuie sur le ratio brut. */
 function ratioLabel(r){
   if(r === null || !isFinite(r)) return { txt:'\u2014', tone:'dim', note:'' };
-  if(Math.abs(r - 1) < 0.005)   return { txt:'1,00 \u00d7', tone:'gold', note:'\u00e9quivalente' };
-  const moinsCher = r < 1;
-  const f = moinsCher ? 1 / r : r;
-  const txt = (f >= 100 ? Math.round(f).toLocaleString('fr-FR')
-             : f >= 10  ? f.toFixed(1).replace('.', ',')
-                        : f.toFixed(2).replace('.', ',')) + ' \u00d7';
-  return { txt, tone: moinsCher ? 'credit' : 'debit',
-           note: moinsCher ? 'moins ch\u00e8re' : 'plus ch\u00e8re' };
+  const pct = r * 100;
+  const txt = (pct >= 1000 ? Math.round(pct).toLocaleString('fr-FR')
+             : pct >= 10   ? pct.toFixed(1).replace('.', ',')
+             : pct >= 1    ? pct.toFixed(1).replace('.', ',')
+             : pct >= 0.01 ? pct.toFixed(2).replace('.', ',')
+                           : pct.toFixed(3).replace('.', ',')) + ' %';
+  if(Math.abs(r - 1) < 0.005) return { txt, tone:'gold', note:'\u00e9quivalente' };
+  return { txt, tone: r < 1 ? 'credit' : 'debit',
+           note: r < 1 ? 'moins ch\u00e8re' : 'plus ch\u00e8re' };
 }
 
 function renderFamParams(){
@@ -2672,7 +2673,7 @@ const FAM_HEAD =
      <th class="r col-money" style="width:125px">Prix limite</th>
      <th class="r col-money" style="width:125px">Prix HDV</th>
      <th class="r col-money" style="width:110px">Prix / XP</th>
-     <th class="r col-money" style="width:140px">vs croquette</th>
+     <th class="r col-money" style="width:150px">Coût vs croquette</th>
    </tr></thead>`;
 
 function renderFamList(){

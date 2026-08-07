@@ -57,7 +57,7 @@ prix / XP ressource = prix de la ressource ÷ XP de la ressource
 ratio vs croquette  = prix/XP ressource ÷ prix du point d'XP
 ```
 
-Un ratio **sous 1** veut dire que la ressource nourrit ton familier moins cher que la croquette — c'est la colonne à trier. Au prix limite exactement, le ratio vaut 1. Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite.
+La colonne « Coût vs croquette » affiche ce ratio **en pourcentage** : à 100 % la ressource coûte exactement le prix de la croquette pour la même XP, **en dessous elle nourrit moins cher**. C'est la colonne à trier. Au prix limite exactement, le ratio vaut 1. Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite.
 
 Valeurs par défaut : XP total 1→100 `179 592`, croquette `13 920` kamas — soit un budget de montée de 5 M.
 
