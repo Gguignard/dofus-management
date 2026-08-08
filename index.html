@@ -710,6 +710,8 @@ select{cursor:pointer;appearance:none;padding-right:26px;
           <input type="search" id="fa-search" placeholder="Chercher une ressource" style="max-width:320px">
           <select id="fa-sort" style="width:230px">
             <option value="ratio">Meilleures affaires d'abord</option>
+          <option value="total">Coût total croissant</option>
+            <option value="total">Coût total croissant</option>
             <option value="nom">Nom A→Z</option>
             <option value="xp-desc">XP décroissant</option>
             <option value="xp-asc">XP croissant</option>
@@ -2538,6 +2540,16 @@ const famRatio = (xp, prix) => {
   const pxr = famPrixParXpRes(xp, prix), etalon = famPrixParXp();
   return (pxr === null || etalon <= 0) ? null : pxr / etalon;
 };
+/* Combien d'unites pour couvrir l'XP visee, et ce que ca coute.
+   On arrondit au superieur : on n'achete pas un demi-item. */
+const famQteNecessaire = xp => {
+  const eff = famXpEff(xp);
+  return eff > 0 ? Math.ceil(num(S.familier.xpTotal) / eff) : null;
+};
+const famCoutTotal = (xp, prix) => {
+  const q = famQteNecessaire(xp);
+  return (q === null || prix === null) ? null : q * prix;
+};
 /* Le rapport de force : combien de fois la ressource rend l'XP moins chere
    que la croquette. Croquette a 10 kamas le point d'XP, ressource a 1 kama
    -> 10, soit dix fois plus rentable. C'est l'inverse du ratio de cout. */
@@ -2644,6 +2656,8 @@ function famFiltered(source, sort, query, useZone = true){
   else if(sort === 'xp-asc')    data.sort((a,b) => a.xp - b.xp);
   else if(sort === 'prix-desc') data.sort((a,b) => famPrixLimite(b.xp) - famPrixLimite(a.xp));
   else if(sort === 'prix-asc')  data.sort((a,b) => famPrixLimite(a.xp) - famPrixLimite(b.xp));
+  else if(sort === 'total') data.sort((a,b) =>
+    (famCoutTotal(a.xp, getPrice(a.nom)) ?? Infinity) - (famCoutTotal(b.xp, getPrice(b.nom)) ?? Infinity));
   /* meilleures affaires d'abord, ressources sans prix relevé à la fin */
   else if(sort === 'ratio') data.sort((a,b) =>
     (famRatio(a.xp, getPrice(a.nom)) ?? Infinity) - (famRatio(b.xp, getPrice(b.nom)) ?? Infinity));
@@ -2658,6 +2672,8 @@ function famRowsHtml(data){
     const hdv   = getPrice(r.nom);
     const pxr   = famPrixParXpRes(r.xp, hdv);
     const rl    = rentabiliteLabel(famRentabilite(r.xp, hdv));
+    const qte   = famQteNecessaire(r.xp);
+    const total = famCoutTotal(r.xp, hdv);
     const isFav = favs.has(r.nom);
     return `<tr data-nom="${esc(r.nom)}">
       <td class="c"><button class="btn-icon" data-act="fav" title="${isFav ? 'Retirer des favoris' : 'Mettre en favori'}"
@@ -2669,19 +2685,26 @@ function famRowsHtml(data){
       <td class="col-money"><span class="money ${pxr === null ? 'dim' : ''}">${pxr === null ? '—' : fmtDec(pxr, 2)}</span></td>
       <td class="col-money"><span class="money ${rl.tone}">${rl.txt}</span>
         ${rl.note ? `<div style="font-size:11px;color:var(--text-3)">${rl.note}</div>` : ''}</td>
+      <td class="col-money"><span class="money ${qte === null ? 'dim' : ''}">${qte === null ? '—' : fmt(qte)}</span></td>
+      <td class="col-money"><span class="money ${total === null ? 'dim' : 'gold'}">${total === null ? '—' : fmt(total)}</span></td>
     </tr>`;
   }).join('');
 }
 
-const FAM_HEAD =
-  `<thead><tr>
+/* L'entete rappelle l'XP visee : la colonne Quantite n'a aucun sens sans elle. */
+function famHead(){
+  return `<thead><tr>
      <th style="width:40px"></th><th>Ressource</th>
-     <th class="r" style="width:80px">XP</th>
-     <th class="r col-money" style="width:125px">Prix limite</th>
-     <th class="r col-money" style="width:125px">Prix HDV</th>
-     <th class="r col-money" style="width:110px">Prix / XP</th>
-     <th class="r col-money" style="width:165px">vs croquette</th>
+     <th class="r" style="width:70px">XP</th>
+     <th class="r col-money" style="width:110px">Prix limite</th>
+     <th class="r col-money" style="width:110px">Prix HDV</th>
+     <th class="r col-money" style="width:95px">Prix / XP</th>
+     <th class="r col-money" style="width:150px">vs croquette</th>
+     <th class="r col-money" style="width:110px">Qt\u00e9 pour<br>
+       <span style="text-transform:none;letter-spacing:0;color:var(--text-3)">${fmt(num(S.familier.xpTotal))} XP</span></th>
+     <th class="r col-money" style="width:125px">Co\u00fbt total</th>
    </tr></thead>`;
+}
 
 function renderFamList(){
   $('#fa-zones').innerHTML =
@@ -2689,17 +2712,17 @@ function renderFamList(){
     ZONE_LIST.map(z => `<button class="chip${FA.zone === z ? ' active' : ''}" data-zone="${esc(z)}">${esc(z)}</button>`).join('');
   const data = famFiltered(FAM_RES, FA.sort, $('#fa-search').value);
   $('#fa-count').textContent = `${data.length} ressources`;
-  $('#fa-list').innerHTML = FAM_HEAD + `<tbody>` +
-    (data.length ? famRowsHtml(data) : emptyRow(7, 'Aucune ressource ne correspond.')) + `</tbody>`;
+  $('#fa-list').innerHTML = famHead() + `<tbody>` +
+    (data.length ? famRowsHtml(data) : emptyRow(9, 'Aucune ressource ne correspond.')) + `</tbody>`;
 }
 
 function renderFamFavs(){
   const favs = new Set(S.familier.favoris);
   const data = famFiltered(FAM_RES.filter(r => favs.has(r.nom)), FA.favSort, '', false);
   $('#fa-favcount').textContent = `${data.length} favori${data.length > 1 ? 's' : ''}`;
-  $('#fa-favlist').innerHTML = FAM_HEAD + `<tbody>` +
+  $('#fa-favlist').innerHTML = famHead() + `<tbody>` +
     (data.length ? famRowsHtml(data)
-      : emptyRow(7, 'Aucun favori — marque les ressources qui reviennent souvent depuis la liste.')) + `</tbody>`;
+      : emptyRow(9, 'Aucun favori — marque les ressources qui reviennent souvent depuis la liste.')) + `</tbody>`;
 }
 
 function toggleFav(nom){

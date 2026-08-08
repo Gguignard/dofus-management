@@ -55,13 +55,17 @@ prix du point d'XP  = prix d'une croquette ÷ 500
 prix limite         = XP de la ressource × prix du point d'XP
 prix / XP ressource = prix de la ressource ÷ XP de la ressource
 rentabilité         = prix du point d'XP ÷ prix/XP ressource
+quantité nécessaire = XP visée ÷ XP de la ressource      (arrondi au supérieur)
+coût total          = quantité nécessaire × prix de la ressource
 ```
 
 La colonne « vs croquette » donne le **rapport de force** : si le point d'XP te revient à 10 kamas en croquette et à 1 kama avec la ressource, elle affiche **10 × plus rentable**. Au-delà du prix limite, elle bascule en rouge et compte à l'envers — « 2 × moins rentable ». C'est la colonne à trier.
 
 Le facteur affiché est toujours supérieur à 1 : ce sont le mot et la couleur qui donnent le sens. Une ressource dix fois trop chère lit mieux en « 10 × moins rentable » qu'en « 0,1 × ». Le tri s'appuie sur la valeur brute, il reste donc exact même quand l'affichage arrondit.
 
-Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite et leur rentabilité.
+Les colonnes **Qté** et **Coût total** répondent à l'autre question : combien d'unités il faut pour boucler la montée, et ce que ça coûte au total. La quantité est arrondie au supérieur — on n'achète pas un demi-item. Au prix limite exactement, le coût total rejoint le budget de la montée, à l'arrondi près.
+
+Le bonus Almanax `×1,5` multiplie l'XP rendue par les ressources (pas par les croquettes), ce qui relève d'autant leur prix limite et leur rentabilité, et réduit d'autant les quantités.
 
 Valeurs par défaut : XP total 1→100 `179 592`, croquette `13 920` kamas — soit un budget de montée de 5 M.
 
