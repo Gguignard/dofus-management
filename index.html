@@ -3582,9 +3582,11 @@ function renderDjCle(s){
   djMajCle(s);
 }
 
-/* Totaux de la clef sans redessiner le tableau : la frappe garde le focus. */
+/* Totaux de la clef sans redessiner le tableau : la frappe garde le focus.
+   Bien viser le tbody : #dj-cle-rows est la table entiere, et la ligne
+   d'en-tete decalerait tous les indices d'un cran. */
 function djMajCle(s){
-  $$('#dj-cle-rows tr').forEach((tr,i) => {
+  $$('#dj-cle-rows tbody tr').forEach((tr,i) => {
     const cell = tr.querySelector('[data-sub]');
     const r = s.cle.rows[i];
     if(cell && r) cell.textContent = fmt(num(r.qty) * num(r.prix));
