@@ -375,6 +375,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
     <button data-page="craft"><span class="ico">⚒</span>Craft<span class="tally num" id="tally-craft">0</span></button>
     <button data-page="fm"><span class="ico">✦</span>Forgemagie<span class="tally num" id="tally-fm">0</span></button>
     <button data-page="familier"><span class="ico">🐾</span>Familier<span class="tally num" id="tally-fav">0</span></button>
+    <button data-page="donjon"><span class="ico">⛨</span>Donjon<span class="tally num" id="tally-donjon">0</span></button>
     <button data-page="prix"><span class="ico">≡</span>Prix<span class="tally num" id="tally-prix">0</span></button>
     <button data-page="ventes"><span class="ico">▲</span>Ventes<span class="tally num" id="tally-ventes">0</span></button>
     <button data-page="donnees"><span class="ico">⛁</span>Données</button>
@@ -756,6 +757,100 @@ select{cursor:pointer;appearance:none;padding-right:26px;
   </div>
 </section>
 
+<!-- ═══════════ DONJON ═══════════ -->
+<section class="page" id="page-donjon">
+  <div class="page-hd">
+    <h1>Farm de donjon</h1>
+    <p>Une session, c'est un lot de clefs craftées et couru jusqu'au bout. Les clefs sont le coût, le butin le gain — et tu vois ce que chaque run t'a rapporté.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><h2>Sessions</h2><div class="spacer"></div>
+      <button class="btn btn-sm btn-primary" id="dj-new">+ Nouvelle session</button>
+    </div>
+    <div class="panel-bd"><div class="chip-row" id="dj-chips"></div></div>
+  </div>
+
+  <div id="dj-vide" class="panel">
+    <div class="panel-bd"><div class="empty">
+      <span class="big">⛨</span>
+      Crée une session pour commencer. Tu y cherches la clef du donjon, tu dis combien tu en crafts, puis tu notes ton butin au fil des runs.
+    </div></div>
+  </div>
+
+  <div id="dj-detail" style="display:none">
+
+    <div class="panel">
+      <div class="panel-hd"><h2>Clef</h2><div class="spacer"></div>
+        <span class="eyebrow" id="dj-cle-src"></span>
+        <button class="btn btn-sm" id="dj-lock" style="display:none"></button>
+      </div>
+      <div class="panel-bd">
+        <div class="field" style="padding-top:0">
+          <label>Nom de la session <span style="color:var(--text-3)">— facultatif</span></label>
+          <div class="ctl" style="width:260px">
+            <input type="text" id="dj-nom" placeholder="ex : Minotot du soir" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="row-flex" style="margin-top:12px">
+          <img class="thumb thumb-lg" id="dj-cle-img" alt="" style="display:none">
+          <div class="search-wrap">
+            <input type="text" id="dj-cle-search" placeholder="Chercher la clef du donjon (ex : Clef de la salle du Minotot)" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+      <div class="panel-bd flush table-scroll"><table class="ledger" id="dj-cle-rows"></table></div>
+      <div style="padding:10px 16px;border-top:1px solid var(--rule-soft)">
+        <button class="btn btn-sm" id="dj-cle-add">+ Ajouter une ressource</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd"><h2>Nombre de runs</h2></div>
+      <div class="panel-bd">
+        <div class="field" style="padding-top:0">
+          <label>Clefs craftées <span style="color:var(--text-3)">— soit autant de donjons</span></label>
+          <div class="ctl"><input type="number" id="dj-nbcles" min="0" placeholder="0"></div>
+        </div>
+        <div class="grid grid-2" style="margin-top:14px">
+          <div class="kpi"><div class="lbl">Prix d'une clef</div><div class="val num gold" id="dj-prix-cle">0</div></div>
+          <div class="kpi"><div class="lbl">Coût de la session</div><div class="val num" id="dj-cout">—</div>
+            <div class="foot" id="dj-cout-detail">renseigne un nombre de clefs</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd"><h2>Butin</h2><div class="spacer"></div>
+        <span class="eyebrow">total <span class="money gold num" id="dj-gain">0</span></span>
+      </div>
+      <div class="panel-bd flush table-scroll"><table class="ledger" id="dj-drops"></table></div>
+      <div style="padding:10px 16px;border-top:1px solid var(--rule-soft)">
+        <button class="btn btn-sm" id="dj-drop-add">+ Ajouter une ressource</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd"><h2>Résultat</h2></div>
+      <div class="panel-bd">
+        <div class="grid grid-4" style="margin-bottom:14px">
+          <div class="kpi"><div class="lbl">Coût des clefs</div><div class="val num" id="dj-r-cout">—</div></div>
+          <div class="kpi"><div class="lbl">Butin</div><div class="val num" id="dj-r-gain">—</div></div>
+          <div class="kpi"><div class="lbl">Bénéfice</div><div class="val num" id="dj-r-benef">—</div></div>
+          <div class="kpi"><div class="lbl">Par donjon</div><div class="val num" id="dj-r-pardonjon">—</div>
+            <div class="foot" id="dj-r-pardonjon-foot">—</div></div>
+        </div>
+        <div class="verdict idle" id="dj-verdict"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><h2>Toutes les sessions</h2></div>
+    <div class="panel-bd flush table-scroll"><table class="ledger" id="dj-liste"></table></div>
+  </div>
+</section>
+
 <!-- ═══════════ PRIX ═══════════ -->
 <section class="page" id="page-prix">
   <div class="page-hd">
@@ -1085,10 +1180,11 @@ function blankState(){
     fmSessions: [],
     ventesEnCours: [],
     ventes:     [],
+    donjonSessions: [],
     familier:   { xpTotal:179592, prixCroq:13920, marge:30,
                   familiers:[], plan:[], favoris:[] },
     /* le travail en cours survit à un rechargement */
-    draft:      { craft:null, fm:null },
+    draft:      { craft:null, fm:null, donjon:null },
     itemCache:  {}
   };
 }
@@ -1115,7 +1211,7 @@ function hydrate(raw){
   ['priceBook','runePrices','itemCache'].forEach(k=>{
     s[k] = (raw[k] && typeof raw[k]==='object' && !Array.isArray(raw[k])) ? raw[k] : {};
   });
-  ['dossiers','crafts','fmSessions','ventesEnCours','ventes'].forEach(k=>{
+  ['dossiers','crafts','fmSessions','ventesEnCours','ventes','donjonSessions'].forEach(k=>{
     s[k] = Array.isArray(raw[k]) ? raw[k] : [];
   });
   ['familiers','plan','favoris'].forEach(k=>{
@@ -3303,6 +3399,8 @@ async function importData(input, mode){
   inc.crafts.forEach(c => { if(!ids.has(c.id)){ S.crafts.push(c); added.crafts++; } });
   const sids = byId(S.fmSessions, 'id');
   inc.fmSessions.forEach(x => { if(!sids.has(x.id)){ S.fmSessions.push(x); added.sessions++; } });
+  const djids = byId(S.donjonSessions, 'id');
+  inc.donjonSessions.forEach(x => { if(!djids.has(x.id)){ S.donjonSessions.push(x); added.sessions++; } });
   const vids = byId(S.ventes, 'id');
   inc.ventes.forEach(x => { if(!vids.has(x.id)){ S.ventes.push(x); added.ventes++; } });
   const eids = byId(S.ventesEnCours, 'id');
@@ -3330,6 +3428,7 @@ function renderDonnees(){
     ['Crafts enregistrés', S.crafts.length],
     ['Dossiers', S.dossiers.length],
     ['Sessions de forgemagie', S.fmSessions.length],
+    ['Sessions de donjon', S.donjonSessions.length],
     ['Items en vente', S.ventesEnCours.length],
     ['Ventes au registre', S.ventes.length],
     ['Prix de ressources', Object.keys(S.priceBook).length],
@@ -3355,6 +3454,411 @@ function initDonnees(){
   });
 }
 
+/* ═══════════════ §10b · FARM DE DONJON ═══════════════
+   Une session = un lot de clefs craftées, couru, puis revendu.
+   Coût : la recette de la clef, multipliée par le nombre de clefs.
+   Gain : le butin ramassé sur l'ensemble des runs.            */
+
+function djSessions(){ return S.donjonSessions; }
+
+function djCurrent(){
+  const id = S.draft.donjon && S.draft.donjon.currentId;
+  return djSessions().find(s => s.id === id) || null;
+}
+
+function djSelect(id){
+  S.draft.donjon = { currentId: id };
+  commit(); renderDonjon();
+}
+
+function djNew(){
+  const s = {
+    id: uid(), createdAt: Date.now(), updatedAt: Date.now(),
+    nom: '', cle: { name:'', img:'', id:null, rows:[] }, locked:false,
+    nbCles: '', drops: []
+  };
+  djSessions().unshift(s);
+  S.draft.donjon = { currentId: s.id };
+  commit(); renderDonjon();
+  const el = $('#dj-nom');
+  if(el) el.focus();
+}
+
+async function djDelete(id){
+  const s = djSessions().find(x => x.id === id);
+  if(!s) return;
+  if(!await ask('Supprimer cette session ?', djTitre(s), 'Supprimer')) return;
+  S.donjonSessions = djSessions().filter(x => x.id !== id);
+  if(S.draft.donjon && S.draft.donjon.currentId === id) S.draft.donjon = { currentId: S.donjonSessions[0]?.id || null };
+  commit(); renderDonjon();
+}
+
+function djDuplicate(id){
+  const s = djSessions().find(x => x.id === id);
+  if(!s) return;
+  const copie = JSON.parse(JSON.stringify(s));
+  copie.id = uid(); copie.createdAt = Date.now(); copie.updatedAt = Date.now();
+  copie.nom = (djTitre(s) + ' (copie)').trim();
+  copie.drops = [];                       /* on repart des mêmes clefs, pas du même butin */
+  djSessions().unshift(copie);
+  S.draft.donjon = { currentId: copie.id };
+  commit(); renderDonjon();
+  toast('Session dupliquée — le butin est remis à zéro');
+}
+
+const djTitre = s => (s.nom || '').trim() || s.cle.name || 'Session sans nom';
+
+/* ─── calculs ─── */
+const djPrixCle  = s => coutCraft(s.cle.rows);
+const djNbCles   = s => Math.max(0, Math.floor(num(s.nbCles)));
+const djCout     = s => djPrixCle(s) * djNbCles(s);
+const djGain     = s => s.drops.reduce((t, d) => t + num(d.qty) * num(d.prix), 0);
+const djBenefice = s => djGain(s) - djCout(s);
+const djParDonjon = (s, v) => djNbCles(s) > 0 ? v / djNbCles(s) : null;
+
+/* ─── rendu ─── */
+function renderDonjon(){
+  renderDjSessions();
+  const s = djCurrent();
+  $('#dj-detail').style.display = s ? '' : 'none';
+  $('#dj-vide').style.display   = s ? 'none' : '';
+  if(s){ djPaintEntete(s); renderDjCle(s); renderDjDrops(s); renderDjResultat(s); }
+  renderDjListe();
+}
+
+function renderDjSessions(){
+  const cur = djCurrent();
+  $('#dj-chips').innerHTML =
+    `<span class="eyebrow" style="margin-right:4px">Sessions</span>` +
+    (djSessions().length
+      ? djSessions().map(s =>
+          `<button class="chip${cur && cur.id === s.id ? ' active' : ''}" data-sess="${s.id}">
+             ${esc(djTitre(s))} <span class="num" style="opacity:.6">${djNbCles(s) || 0}</span>
+           </button>`).join('')
+      : `<span style="color:var(--text-3);font-size:12px">aucune session</span>`);
+}
+
+function djPaintEntete(s){
+  $('#dj-nom').value    = s.nom;
+  $('#dj-nbcles').value = s.nbCles;
+  const img = $('#dj-cle-img');
+  if(s.cle.img){ img.src = s.cle.img; img.style.display = ''; } else { img.style.display = 'none'; }
+  $('#dj-cle-search').value = s.cle.name;
+}
+
+function renderDjCle(s){
+  const locked = r => s.locked && r.fromRecipe;
+  const t = $('#dj-cle-rows');
+  if(!s.cle.rows.length){
+    t.innerHTML = `<tbody>${emptyRow(6, "Cherche la clef du donjon : sa recette se remplit toute seule.")}</tbody>`;
+  } else {
+    t.innerHTML =
+      `<thead><tr>
+         <th style="width:44px"></th><th>Ressource</th>
+         <th class="r" style="width:70px">Qté</th>
+         <th class="r col-money" style="width:130px">Prix unitaire</th>
+         <th class="r col-money" style="width:130px">Sous-total</th>
+         <th style="width:40px"></th>
+       </tr></thead><tbody>` +
+      s.cle.rows.map((r,i) => {
+        const nameCell = locked(r) ? `<span>${esc(r.name)}</span>`
+          : `<input type="text" data-f="name" value="${esc(r.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false">`;
+        const qtyCell = locked(r) ? `<span class="money">${fmt(num(r.qty))}</span>`
+          : `<input type="number" data-f="qty" min="0" value="${esc(r.qty)}" style="text-align:center">`;
+        return `<tr data-i="${i}">
+          <td>${thumbTag(r.img, 'thumb thumb-sm')}</td>
+          <td>${nameCell}</td>
+          <td class="r">${qtyCell}</td>
+          <td class="col-money"><input type="number" data-f="prix" min="0" value="${esc(r.prix)}"></td>
+          <td class="col-money"><span class="money dim" data-sub>${fmt(num(r.qty) * num(r.prix))}</span></td>
+          <td class="c">${locked(r) ? '' : `<button class="btn-icon" data-act="del">×</button>`}</td>
+        </tr>`;
+      }).join('') + '</tbody>';
+  }
+  const btn = $('#dj-lock');
+  const hasRecipe = s.cle.rows.some(r => r.fromRecipe);
+  btn.style.display = hasRecipe ? '' : 'none';
+  btn.textContent = s.locked ? 'Modifier la recette' : 'Reverrouiller';
+  djMajCle(s);
+}
+
+/* Totaux de la clef sans redessiner le tableau : la frappe garde le focus. */
+function djMajCle(s){
+  $$('#dj-cle-rows tr').forEach((tr,i) => {
+    const cell = tr.querySelector('[data-sub]');
+    const r = s.cle.rows[i];
+    if(cell && r) cell.textContent = fmt(num(r.qty) * num(r.prix));
+  });
+  $('#dj-prix-cle').textContent = fmt(djPrixCle(s));
+  $('#dj-cout').textContent     = djNbCles(s) ? fmt(djCout(s)) : '—';
+  $('#dj-cout-detail').textContent = djNbCles(s)
+    ? `${fmt(djPrixCle(s))} × ${djNbCles(s)} clefs`
+    : 'renseigne un nombre de clefs';
+}
+
+function renderDjDrops(s){
+  const t = $('#dj-drops');
+  t.innerHTML =
+    `<thead><tr>
+       <th style="width:44px"></th><th>Ressource obtenue</th>
+       <th class="r" style="width:90px">Qté</th>
+       <th class="r col-money" style="width:130px">Prix unitaire</th>
+       <th class="r col-money" style="width:140px">Sous-total</th>
+       <th style="width:40px"></th>
+     </tr></thead><tbody>` +
+    (s.drops.length ? s.drops.map((d,i) => `
+      <tr data-i="${i}">
+        <td>${thumbTag(d.img, 'thumb thumb-sm')}</td>
+        <td><input type="text" data-f="name" value="${esc(d.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false"></td>
+        <td class="r"><input type="number" data-f="qty" min="0" value="${esc(d.qty)}" style="text-align:center"></td>
+        <td class="col-money"><input type="number" data-f="prix" min="0" value="${esc(d.prix)}"></td>
+        <td class="col-money"><span class="money dim" data-sub>${fmt(num(d.qty) * num(d.prix))}</span></td>
+        <td class="c"><button class="btn-icon" data-act="del">×</button></td>
+      </tr>`).join('')
+      : emptyRow(6, 'Ajoute ce que tu as ramassé sur tes runs.')) + '</tbody>';
+  djMajDrops(s);
+}
+
+function djMajDrops(s){
+  $$('#dj-drops tbody tr').forEach((tr,i) => {
+    const cell = tr.querySelector('[data-sub]');
+    const d = s.drops[i];
+    if(cell && d) cell.textContent = fmt(num(d.qty) * num(d.prix));
+  });
+  $('#dj-gain').textContent = fmt(djGain(s));
+}
+
+function renderDjResultat(s){
+  const cout = djCout(s), gain = djGain(s), benef = djBenefice(s);
+  const n = djNbCles(s);
+  const roi = cout > 0 ? benef / cout * 100 : null;
+
+  const set = (id, txt, cls) => { const el = $(id); el.textContent = txt; el.className = 'val num ' + (cls || ''); };
+  set('#dj-r-cout', n ? fmt(cout) : '—', n ? '' : 'dim');
+  set('#dj-r-gain', s.drops.length ? fmt(gain) : '—', s.drops.length ? 'gold' : 'dim');
+  set('#dj-r-benef', (n || s.drops.length) ? fmtSigned(benef) : '—',
+      !(n || s.drops.length) ? 'dim' : benef >= 0 ? 'credit' : 'debit');
+  const pd = djParDonjon(s, benef);
+  set('#dj-r-pardonjon', pd === null ? '—' : fmtSigned(pd),
+      pd === null ? 'dim' : pd >= 0 ? 'credit' : 'debit');
+  $('#dj-r-pardonjon-foot').textContent = n
+    ? `sur ${n} donjon${n > 1 ? 's' : ''} · ${fmt(djParDonjon(s, gain))} de butin brut`
+    : 'nombre de clefs manquant';
+
+  const v = $('#dj-verdict');
+  let cls, lbl, detail;
+  if(!n && !s.drops.length){
+    cls = 'idle'; lbl = 'Session vide'; detail = 'Choisis une clef, un nombre de runs, puis note ton butin.';
+  } else if(!s.drops.length){
+    cls = 'idle'; lbl = 'En attente du butin';
+    detail = `${fmt(cout)} kamas engagés. Ajoute ce que tu ramasses au fur et à mesure.`;
+  } else if(benef > 0){
+    cls = 'ok'; lbl = 'Session rentable';
+    detail = `${fmtPct(roi)} de retour sur les ${fmt(cout)} kamas de clefs.`;
+  } else if(benef < 0){
+    cls = 'ko'; lbl = 'Session déficitaire';
+    detail = `Le butin ne couvre pas les ${fmt(cout)} kamas de clefs.`;
+  } else {
+    cls = 'idle'; lbl = 'Équilibre'; detail = 'Le butin rembourse exactement les clefs.';
+  }
+  v.className = 'verdict ' + cls;
+  v.innerHTML = `<div><div class="lbl">${lbl}</div><div class="detail">${detail}</div></div>` +
+    ((n || s.drops.length) ? `<div class="amt">${fmtSigned(benef)}</div>` : '');
+}
+
+function renderDjListe(){
+  const t = $('#dj-liste');
+  const list = djSessions();
+  if(!list.length){
+    t.innerHTML = `<tbody>${emptyRow(1, 'Aucune session. Crée la première pour commencer à compter.')}</tbody>`;
+    return;
+  }
+  const cur = djCurrent();
+  t.innerHTML =
+    `<thead><tr>
+       <th style="width:44px"></th><th>Session</th>
+       <th class="r" style="width:80px">Donjons</th>
+       <th class="r col-money" style="width:120px">Coût</th>
+       <th class="r col-money" style="width:120px">Butin</th>
+       <th class="r col-money" style="width:140px">Bénéfice</th>
+       <th class="r col-money" style="width:130px">Par donjon</th>
+       <th style="width:150px"></th>
+     </tr></thead><tbody>` +
+    list.map(s => {
+      const benef = djBenefice(s), pd = djParDonjon(s, benef);
+      return `<tr data-id="${s.id}"${cur && cur.id === s.id ? ' style="background:rgba(232,184,75,.05)"' : ''}>
+        <td>${thumbTag(s.cle.img, 'thumb thumb-sm')}</td>
+        <td>${esc(djTitre(s))}
+          <div style="font-size:11px;color:var(--text-3)">${esc(s.cle.name || 'clef non définie')} · ${dateFR(s.createdAt)}</div></td>
+        <td class="r"><span class="money">${djNbCles(s) || '—'}</span></td>
+        <td class="col-money">${moneyCell(djCout(s))}</td>
+        <td class="col-money">${moneyCell(djGain(s), 'gold')}</td>
+        <td class="col-money">${signedCell(benef)}</td>
+        <td class="col-money">${pd === null ? '<span class="money dim">—</span>' : signedCell(pd)}</td>
+        <td class="r">
+          <button class="btn btn-sm" data-act="open">Ouvrir</button>
+          <button class="btn-icon" data-act="dup" title="Dupliquer" style="color:var(--text-3)">⧉</button>
+          <button class="btn-icon" data-act="del" title="Supprimer">×</button>
+        </td>
+      </tr>`;
+    }).join('') + '</tbody>';
+}
+
+/* ─── clef : recherche et recette ─── */
+async function djPickCle(item){
+  const s = djCurrent();
+  if(!s) return;
+  s.cle.name = item.name;
+  s.cle.img  = itemImg(item);
+  s.cle.id   = item.ankama_id || item.id;
+  s.updatedAt = Date.now();
+  $('#dj-cle-src').textContent = 'Chargement de la recette…';
+  commit(); djPaintEntete(s);
+
+  let recipe = Array.isArray(item.recipe) && item.recipe.length ? item.recipe : null;
+  if(!recipe){
+    const detail = await apiItem(s.cle.id);
+    recipe = detail && detail.recipe.length ? detail.recipe : null;
+  }
+  if(recipe){
+    const rows = await Promise.all(recipe.map(resolveIngredient));
+    s.cle.rows = rows.map(r => ({ name:r.name, qty:r.qty, prix:getPrice(r.name) ?? 0, img:r.img, fromRecipe:true }));
+    s.locked = true;
+    $('#dj-cle-src').textContent = `${rows.length} ingrédients · via dofusdude`;
+  } else {
+    s.cle.rows = [];
+    s.locked = false;
+    $('#dj-cle-src').textContent = 'Aucune recette connue — à saisir';
+  }
+  commit(); renderDjCle(s); renderDjResultat(s); renderDjListe();
+}
+
+/* ─── câblage ─── */
+function initDonjon(){
+  bindAutocomplete({
+    root:'#dj-cle-search', selector:'input',
+    kinds:['resources'], limit:24,
+    filter: it => /^cle/i.test(((it.type && it.type.name) || '').normalize('NFD').replace(/[̀-ͯ]/g,'')),
+    onPick:(input, item) => djPickCle(item)
+  });
+  bindAutocomplete({
+    root:'#dj-cle-rows', selector:'input[data-f="name"]',
+    kinds:['resources','consumables'],
+    onPick:(input, item) => {
+      const s = djCurrent(); if(!s) return;
+      const r = s.cle.rows[+input.closest('tr').dataset.i]; if(!r) return;
+      r.name = item.name; r.img = itemImg(item);
+      const known = getPrice(item.name);
+      if(known !== null) r.prix = known;
+      commit(); renderDjCle(s); renderDjResultat(s);
+    }
+  });
+  bindAutocomplete({
+    root:'#dj-drops', selector:'input[data-f="name"]',
+    kinds:['resources','consumables','equipment'],
+    onPick:(input, item) => {
+      const s = djCurrent(); if(!s) return;
+      const d = s.drops[+input.closest('tr').dataset.i]; if(!d) return;
+      d.name = item.name; d.img = itemImg(item);
+      const known = getPrice(item.name);
+      if(known !== null) d.prix = known;
+      commit(); renderDjDrops(s); renderDjResultat(s);
+    }
+  });
+
+  $('#dj-new').addEventListener('click', djNew);
+  $('#dj-nom').addEventListener('input', e => {
+    const s = djCurrent(); if(!s) return;
+    s.nom = e.target.value; s.updatedAt = Date.now();
+    commit(); renderDjSessions(); renderDjListe();
+  });
+  $('#dj-nbcles').addEventListener('input', e => {
+    const s = djCurrent(); if(!s) return;
+    s.nbCles = e.target.value; s.updatedAt = Date.now();
+    commit(); djMajCle(s); renderDjResultat(s); renderDjSessions(); renderDjListe();
+  });
+  $('#dj-lock').addEventListener('click', () => {
+    const s = djCurrent(); if(!s) return;
+    s.locked = !s.locked;
+    commit(); renderDjCle(s);
+    toast(s.locked ? 'Recette reverrouillée' : 'Recette déverrouillée', 'warn');
+  });
+  $('#dj-cle-add').addEventListener('click', () => {
+    const s = djCurrent(); if(!s) return;
+    s.cle.rows.push({ name:'', qty:1, prix:0, img:'' });
+    commit(); renderDjCle(s); renderDjResultat(s);
+  });
+  $('#dj-drop-add').addEventListener('click', () => {
+    const s = djCurrent(); if(!s) return;
+    s.drops.push({ name:'', qty:1, prix:0, img:'' });
+    commit(); renderDjDrops(s); renderDjResultat(s);
+  });
+
+  delegate('#dj-chips', 'click', '[data-sess]', (e, b) => djSelect(+b.dataset.sess));
+
+  /* saisie dans la recette de la clef */
+  delegate('#dj-cle-rows', 'input', 'input', (e, input) => {
+    const s = djCurrent(); if(!s) return;
+    const r = s.cle.rows[+input.closest('tr').dataset.i]; if(!r) return;
+    const f = input.dataset.f;
+    if(f === 'name'){
+      r.name = input.value;
+      const known = getPrice(r.name);
+      if(known !== null && num(r.prix) === 0){
+        r.prix = known;
+        const p = input.closest('tr').querySelector('input[data-f="prix"]');
+        if(p) p.value = known;
+      }
+    } else if(f === 'qty'){ r.qty = input.value === '' ? '' : num(input.value); }
+    else if(f === 'prix'){
+      r.prix = input.value === '' ? '' : num(input.value);
+      if(r.name.trim() && num(r.prix) > 0) setPrice(r.name, num(r.prix));
+    }
+    s.updatedAt = Date.now();
+    commit(); djMajCle(s); renderDjResultat(s); renderDjListe();
+  });
+  delegate('#dj-cle-rows', 'click', '[data-act="del"]', (e, b) => {
+    const s = djCurrent(); if(!s) return;
+    s.cle.rows.splice(+b.closest('tr').dataset.i, 1);
+    commit(); renderDjCle(s); renderDjResultat(s); renderDjListe();
+  });
+
+  /* saisie du butin */
+  delegate('#dj-drops', 'input', 'input', (e, input) => {
+    const s = djCurrent(); if(!s) return;
+    const d = s.drops[+input.closest('tr').dataset.i]; if(!d) return;
+    const f = input.dataset.f;
+    if(f === 'name'){
+      d.name = input.value;
+      const known = getPrice(d.name);
+      if(known !== null && num(d.prix) === 0){
+        d.prix = known;
+        const p = input.closest('tr').querySelector('input[data-f="prix"]');
+        if(p) p.value = known;
+      }
+    } else if(f === 'qty'){ d.qty = input.value === '' ? '' : num(input.value); }
+    else if(f === 'prix'){
+      d.prix = input.value === '' ? '' : num(input.value);
+      if(d.name.trim() && num(d.prix) > 0) setPrice(d.name, num(d.prix));
+    }
+    s.updatedAt = Date.now();
+    commit(); djMajDrops(s); renderDjResultat(s); renderDjListe();
+  });
+  delegate('#dj-drops', 'click', '[data-act="del"]', (e, b) => {
+    const s = djCurrent(); if(!s) return;
+    s.drops.splice(+b.closest('tr').dataset.i, 1);
+    commit(); renderDjDrops(s); renderDjResultat(s); renderDjListe();
+  });
+
+  delegate('#dj-liste', 'click', '[data-act]', (e, b) => {
+    const id = +b.closest('tr').dataset.id;
+    const act = b.dataset.act;
+    if(act === 'open') djSelect(id);
+    else if(act === 'dup') djDuplicate(id);
+    else if(act === 'del') djDelete(id);
+  });
+}
+
 /* ═══════════════ §14 · NAVIGATION & DÉMARRAGE ═══════════════ */
 
 let currentPage = 'bilan';
@@ -3369,6 +3873,7 @@ function goPage(name){
   if(name === 'craft')    { cfPaintItem(); cfRenderRows(); renderCraftSaves(); }
   if(name === 'fm')       { renderFmPrix(); renderConv(); renderFmLines(); fmFillCraftSelect(); renderFmSessions(); }
   if(name === 'familier') renderFamilier();
+  if(name === 'donjon')   renderDonjon();
   if(name === 'prix')     { renderPrix(); renderPrixRunes(); }
   if(name === 'ventes')   renderVentes();
   if(name === 'donnees')  renderDonnees();
@@ -3391,6 +3896,7 @@ function refreshChrome(){
   $('#tally-craft').textContent  = S.crafts.length;
   $('#tally-fm').textContent     = S.fmSessions.length;
   $('#tally-fav').textContent    = S.familier.favoris.length;
+  $('#tally-donjon').textContent = S.donjonSessions.length;
   $('#tally-prix').textContent   = Object.keys(S.priceBook).length + Object.keys(S.runePrices).length;
   $('#tally-ventes').textContent = S.ventesEnCours.length;
 }
@@ -3400,6 +3906,7 @@ function renderAll(){
   cfPaintItem(); cfRenderRows(); renderCraftSaves();
   renderFmPrix(); renderConv(); fmPaintItem(); renderFmLines(); renderFmSessions();
   renderFamilier();
+  renderDonjon();
   renderPrix(); renderPrixRunes();
   renderVentes();
   renderBilan();
@@ -3418,6 +3925,7 @@ function boot(){
   initCraft();
   initFm();
   initFamilier();
+  initDonjon();
   initVentes();
   initPrix();
   initDonnees();

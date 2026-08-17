@@ -20,7 +20,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 
 ---
 
-## Les sept onglets
+## Les huit onglets
 
 | Onglet | Ce qu'il fait |
 |---|---|
@@ -28,6 +28,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 | **Craft** | Recherche d'équipement, recette remplie automatiquement et verrouillée, coût des ressources, comparaison prix marché / ton prix, dossiers |
 | **Forgemagie** | Relevé des prix de runes, arbitrage acheter-ou-crafter, session de forge avec coût des runes et ROI |
 | **Familier** | Rentabilité de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
+| **Donjon** | Sessions de farm : coût des clefs craftées d'un côté, butin ramassé de l'autre, bénéfice total et par run |
 | **Prix** | Le référentiel commun : ressources et runes au même endroit |
 | **Ventes** | File des items en vente (venus du Craft ou de la Forge), puis registre des ventes conclues |
 | **Données** | Export, import, réinitialisation |
@@ -47,6 +48,18 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 **Craft** — `coût = Σ(qté × prix)` · `net = prix × 0,98` · `profit = net − coût` · `rentabilité = profit ÷ coût`
 
 **Forgemagie** — `Pa = 3 runes de base` · `Ra = 3 Pa` ou `9 runes de base` · le prix retenu est le moins cher entre le HDV et les crafts · `runes posées = stock + achetées − restantes` · `coût = Σ(posées × prix retenu)` · `ROI = profit ÷ (item brut + coût des runes)`
+
+**Donjon** — une session est un lot de clefs craftées puis couru jusqu'au bout.
+
+```
+prix d'une clef  = Σ(quantité × prix) de sa recette
+coût de session  = prix d'une clef × nombre de clefs
+butin            = Σ(quantité × prix) des ressources ramassées
+bénéfice         = butin − coût
+par donjon       = bénéfice ÷ nombre de clefs
+```
+
+Le nombre de clefs fait aussi office de nombre de runs : une clef, un donjon. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
 
 **Familier** — une croquette vaut toujours **500 XP** ; c'est le prix que tu la paies qui varie, et c'est lui qui fixe l'étalon.
 
@@ -84,6 +97,7 @@ runePrices     prix des runes, par « stat|palier »
 dossiers, crafts
 fmSessions     sessions de forge, avec lien facultatif vers un craft
 ventesEnCours, ventes
+donjonSessions sessions de farm : recette de la clef, nombre de runs, butin
 familier       paramètres, familiers suivis, planification, favoris
 draft          le travail en cours
 itemCache      réponses de l'API déjà obtenues
@@ -101,5 +115,5 @@ Vider les données de navigation efface la clé. **L'export est la seule copie d
 ## Sources
 
 Noms d'items, recettes, images et effets : [dofusdude](https://docs.dofusdu.de) (`api.dofusdu.de`, branche Dofus 3, langue française).
-Points d'entrée utilisés : `items/equipment` et `items/weapons` pour le Craft et la Forgemagie, `items/resources` et `items/consumables` pour les lignes de ressources. Les familiers n'ont pas de point d'entrée dédié — ce sont des `equipment` de type `Familier`, et l'API ne sachant pas filtrer par type, le tri se fait côté client.
+Points d'entrée utilisés : `items/equipment` et `items/weapons` pour le Craft et la Forgemagie, `items/resources` et `items/consumables` pour les lignes de ressources. Les clefs de donjon sont des `items/resources` de type `Clef`, filtrées côté client comme les familiers. Les familiers n'ont pas de point d'entrée dédié — ce sont des `equipment` de type `Familier`, et l'API ne sachant pas filtrer par type, le tri se fait côté client.
 Table des runes de forgemagie et table d'XP des ressources : reprises telles quelles des outils d'origine.
