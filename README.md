@@ -64,6 +64,8 @@ par heure        = bénéfice × 60 ÷ temps de farm
 
 **Les clefs portent le coût, les runs portent le temps**, et en multi-compte les deux ne se confondent pas : chaque personnage pose sa clef, mais tous courent le même donjon. 400 clefs à 4 personnages coûtent bien 400 clefs, mais ne font que 100 runs — d'où un rendement horaire quatre fois meilleur qu'en solo. Le champ « Personnages par run » vaut 1 par défaut, ce qui laisse les sessions solo inchangées.
 
+Le butin se saisit dans le désordre, au fil des runs. Chaque ligne affiche donc sa **part du butin** avec une barre, et un tri **Les plus rentables** reclasse le tableau — c'est là qu'on voit qu'une seule ressource peut peser la moitié d'une session. L'ordre d'affichage n'affecte pas la saisie : chaque ligne garde son indice d'origine.
+
 La durée d'un run, en minutes, donne le **rendement horaire** — le seul chiffre qui permette de comparer deux donjons entre eux, puisqu'un farm très rentable mais très lent peut valoir moins qu'un farm modeste et rapide. Sans durée renseignée, la colonne reste muette et le reste fonctionne. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
 
 **Familier** — une croquette vaut toujours **500 XP** ; c'est le prix que tu la paies qui varie, et c'est lui qui fixe l'étalon.

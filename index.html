@@ -835,6 +835,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
 
     <div class="panel">
       <div class="panel-hd"><h2>Butin</h2><div class="spacer"></div>
+        <div class="chip-row" id="dj-drop-sorts"></div>
         <span class="eyebrow">total <span class="money gold num" id="dj-gain">0</span></span>
       </div>
       <div class="panel-bd flush table-scroll"><table class="ledger" id="dj-drops"></table></div>
@@ -3481,6 +3482,8 @@ function initDonnees(){
    Coût : la recette de la clef, multipliée par le nombre de clefs.
    Gain : le butin ramassé sur l'ensemble des runs.            */
 
+const DJ = { dropSort: 'saisie' };
+
 function djSessions(){ return S.donjonSessions; }
 
 function djCurrent(){
@@ -3641,36 +3644,76 @@ function djMajCle(s){
     : 'renseigne une durée par run';
 }
 
+/* Le butin se saisit dans le désordre, ligne après ligne. Pour voir ce qui
+   rapporte vraiment, deux lectures : la part de chaque ressource dans le
+   total, et un tri à la demande. L'ordre d'affichage peut donc différer de
+   l'ordre du modèle — chaque ligne porte son indice d'origine. */
+function djDropsOrdonnes(s){
+  const list = s.drops.map((d, i) => ({ d, i }));
+  if(DJ.dropSort === 'valeur')
+    list.sort((a, b) => (num(b.d.qty) * num(b.d.prix)) - (num(a.d.qty) * num(a.d.prix)));
+  return list;
+}
+
 function renderDjDrops(s){
+  $('#dj-drop-sorts').innerHTML =
+    [['saisie','Ordre de saisie'],['valeur','Les plus rentables']]
+      .map(([k,l]) => `<button class="chip${DJ.dropSort === k ? ' active' : ''}" data-dsort="${k}">${l}</button>`).join('');
+
   const t = $('#dj-drops');
+  const total = djGain(s);
   t.innerHTML =
     `<thead><tr>
        <th style="width:44px"></th><th>Ressource obtenue</th>
        <th class="r" style="width:90px">Qté</th>
        <th class="r col-money" style="width:130px">Prix unitaire</th>
        <th class="r col-money" style="width:140px">Sous-total</th>
+       <th class="col-money" style="width:150px">Part du butin</th>
        <th style="width:40px"></th>
      </tr></thead><tbody>` +
-    (s.drops.length ? s.drops.map((d,i) => `
+    (s.drops.length ? djDropsOrdonnes(s).map(({ d, i }) => {
+      const sous = num(d.qty) * num(d.prix);
+      const pct = total > 0 ? sous / total * 100 : 0;
+      return `
       <tr data-i="${i}">
         <td>${thumbTag(d.img, 'thumb thumb-sm')}</td>
         <td><input type="text" data-f="name" value="${esc(d.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false"></td>
         <td class="r"><input type="number" data-f="qty" min="0" value="${esc(d.qty)}" style="text-align:center"></td>
         <td class="col-money"><input type="number" data-f="prix" min="0" value="${esc(d.prix)}"></td>
-        <td class="col-money"><span class="money dim" data-sub>${fmt(num(d.qty) * num(d.prix))}</span></td>
+        <td class="col-money"><span class="money dim" data-sub>${fmt(sous)}</span></td>
+        <td class="col-money">
+          <div class="row-flex" style="gap:8px;justify-content:flex-end">
+            <span class="bar" style="max-width:60px"><i data-bar style="width:${total > 0 ? pct.toFixed(1) : 0}%"></i></span>
+            <span class="money ${pct >= 20 ? 'gold' : 'dim'}" data-part style="min-width:52px">${total > 0 ? pct.toFixed(1).replace('.', ',') + ' %' : '—'}</span>
+          </div>
+        </td>
         <td class="c"><button class="btn-icon" data-act="del">×</button></td>
-      </tr>`).join('')
-      : emptyRow(6, 'Ajoute ce que tu as ramassé sur tes runs.')) + '</tbody>';
+      </tr>`;
+    }).join('')
+      : emptyRow(7, 'Ajoute ce que tu as ramassé sur tes runs.')) + '</tbody>';
   djMajDrops(s);
 }
 
+/* La ligne affichée n'est pas forcément la n-ième du modèle : on lit son
+   indice d'origine plutôt que sa position. */
 function djMajDrops(s){
-  $$('#dj-drops tbody tr').forEach((tr,i) => {
+  const total = djGain(s);
+  $$('#dj-drops tbody tr').forEach(tr => {
+    const d = s.drops[+tr.dataset.i];
+    if(!d) return;
+    const sous = num(d.qty) * num(d.prix);
     const cell = tr.querySelector('[data-sub]');
-    const d = s.drops[i];
-    if(cell && d) cell.textContent = fmt(num(d.qty) * num(d.prix));
+    if(cell) cell.textContent = fmt(sous);
+    const pct = total > 0 ? sous / total * 100 : 0;
+    const bar = tr.querySelector('[data-bar]');
+    if(bar) bar.style.width = (total > 0 ? pct.toFixed(1) : 0) + '%';
+    const part = tr.querySelector('[data-part]');
+    if(part){
+      part.textContent = total > 0 ? pct.toFixed(1).replace('.', ',') + ' %' : '—';
+      part.className = 'money ' + (pct >= 20 ? 'gold' : 'dim');
+    }
   });
-  $('#dj-gain').textContent = fmt(djGain(s));
+  $('#dj-gain').textContent = fmt(total);
 }
 
 function renderDjResultat(s){
@@ -3863,6 +3906,10 @@ function initDonjon(){
   });
 
   delegate('#dj-chips', 'click', '[data-sess]', (e, b) => djSelect(+b.dataset.sess));
+  delegate('#dj-drop-sorts', 'click', '[data-dsort]', (e, b) => {
+    DJ.dropSort = b.dataset.dsort;
+    const s = djCurrent(); if(s) renderDjDrops(s);
+  });
 
   /* saisie dans la recette de la clef */
   delegate('#dj-cle-rows', 'input', 'input', (e, input) => {
