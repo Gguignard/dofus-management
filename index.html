@@ -762,7 +762,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
 <section class="page" id="page-donjon">
   <div class="page-hd">
     <h1>Farm de donjon</h1>
-    <p>Une session, c'est un lot de clefs craftées et couru jusqu'au bout. Les clefs sont le coût, le butin le gain — et tu vois ce que chaque run t'a rapporté.</p>
+    <p>Une session, c'est un lot de clefs craftées et couru jusqu'au bout. Les clefs portent le coût, les runs portent le temps — en multi-compte les deux ne se confondent pas.</p>
   </div>
 
   <div class="panel">
@@ -814,15 +814,21 @@ select{cursor:pointer;appearance:none;padding-right:26px;
           <div class="ctl"><input type="number" id="dj-nbcles" min="0" placeholder="0"></div>
         </div>
         <div class="field">
-          <label>Durée d'un donjon <span style="color:var(--text-3)">— en minutes, pour le rendement horaire</span></label>
+          <label>Personnages par run <span style="color:var(--text-3)">— chacun pose sa clef, mais c'est un seul donjon</span></label>
+          <div class="ctl"><input type="number" id="dj-persos" min="1" step="1" placeholder="1"></div>
+        </div>
+        <div class="field">
+          <label>Durée d'un run <span style="color:var(--text-3)">— en minutes, pour le rendement horaire</span></label>
           <div class="ctl"><input type="number" id="dj-temps" min="0" step="1" placeholder="0"></div>
         </div>
-        <div class="grid grid-3" style="margin-top:14px">
+        <div class="grid grid-4" style="margin-top:14px">
           <div class="kpi"><div class="lbl">Prix d'une clef</div><div class="val num gold" id="dj-prix-cle">0</div></div>
           <div class="kpi"><div class="lbl">Coût de la session</div><div class="val num" id="dj-cout">—</div>
             <div class="foot" id="dj-cout-detail">renseigne un nombre de clefs</div></div>
+          <div class="kpi"><div class="lbl">Runs réels</div><div class="val num" id="dj-runs">—</div>
+            <div class="foot" id="dj-runs-detail">renseigne un nombre de clefs</div></div>
           <div class="kpi"><div class="lbl">Temps de farm</div><div class="val num" id="dj-temps-total">—</div>
-            <div class="foot" id="dj-temps-detail">renseigne une durée par donjon</div></div>
+            <div class="foot" id="dj-temps-detail">renseigne une durée par run</div></div>
         </div>
       </div>
     </div>
@@ -844,7 +850,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
           <div class="kpi"><div class="lbl">Coût des clefs</div><div class="val num" id="dj-r-cout">—</div></div>
           <div class="kpi"><div class="lbl">Butin</div><div class="val num" id="dj-r-gain">—</div></div>
           <div class="kpi"><div class="lbl">Bénéfice</div><div class="val num" id="dj-r-benef">—</div></div>
-          <div class="kpi"><div class="lbl">Par donjon</div><div class="val num" id="dj-r-pardonjon">—</div>
+          <div class="kpi"><div class="lbl">Par run</div><div class="val num" id="dj-r-pardonjon">—</div>
             <div class="foot" id="dj-r-pardonjon-foot">—</div></div>
           <div class="kpi"><div class="lbl">Par heure</div><div class="val num" id="dj-r-parheure">—</div>
             <div class="foot" id="dj-r-parheure-foot">—</div></div>
@@ -3491,7 +3497,7 @@ function djNew(){
   const s = {
     id: uid(), createdAt: Date.now(), updatedAt: Date.now(),
     nom: '', cle: { name:'', img:'', id:null, rows:[] }, locked:false,
-    nbCles: '', tempsMin: '', drops: []
+    nbCles: '', persos: '', tempsMin: '', drops: []
   };
   djSessions().unshift(s);
   S.draft.donjon = { currentId: s.id };
@@ -3530,10 +3536,16 @@ const djNbCles   = s => Math.max(0, Math.floor(num(s.nbCles)));
 const djCout     = s => djPrixCle(s) * djNbCles(s);
 const djGain     = s => s.drops.reduce((t, d) => t + num(d.qty) * num(d.prix), 0);
 const djBenefice = s => djGain(s) - djCout(s);
-const djParDonjon = (s, v) => djNbCles(s) > 0 ? v / djNbCles(s) : null;
+/* En multi-compte, chaque personnage consomme sa clef mais tous courent le
+   meme donjon : 400 clefs a 4 personnages font 100 runs, pas 400. Les clefs
+   portent le cout, les runs portent le temps. */
+const djPersos = s => Math.max(1, Math.floor(num(s.persos) || 1));
+const djRuns   = s => djNbCles(s) / djPersos(s);
+const djParRun = (s, v) => djRuns(s) > 0 ? v / djRuns(s) : null;
 /* Le rendement horaire : la seule mesure qui compare deux donjons entre eux. */
-const djTempsTotal = s => num(s.tempsMin) * djNbCles(s);
+const djTempsTotal = s => num(s.tempsMin) * djRuns(s);
 const djParHeure   = (s, v) => djTempsTotal(s) > 0 ? v * 60 / djTempsTotal(s) : null;
+const fmtRuns = r => Number.isInteger(r) ? fmt(r) : fmtDec(r, 2);
 
 /* ─── rendu ─── */
 function renderDonjon(){
@@ -3552,7 +3564,7 @@ function renderDjSessions(){
     (djSessions().length
       ? djSessions().map(s =>
           `<button class="chip${cur && cur.id === s.id ? ' active' : ''}" data-sess="${s.id}">
-             ${esc(djTitre(s))} <span class="num" style="opacity:.6">${djNbCles(s) || 0}</span>
+             ${esc(djTitre(s))} <span class="num" style="opacity:.6">${djRuns(s) ? fmtRuns(djRuns(s)) : 0}</span>
            </button>`).join('')
       : `<span style="color:var(--text-3);font-size:12px">aucune session</span>`);
 }
@@ -3560,6 +3572,7 @@ function renderDjSessions(){
 function djPaintEntete(s){
   $('#dj-nom').value    = s.nom;
   $('#dj-nbcles').value = s.nbCles;
+  $('#dj-persos').value = s.persos;
   $('#dj-temps').value  = s.tempsMin;
   const img = $('#dj-cle-img');
   if(s.cle.img){ img.src = s.cle.img; img.style.display = ''; } else { img.style.display = 'none'; }
@@ -3616,11 +3629,16 @@ function djMajCle(s){
   $('#dj-cout-detail').textContent = djNbCles(s)
     ? `${fmt(djPrixCle(s))} × ${djNbCles(s)} clefs`
     : 'renseigne un nombre de clefs';
+  const runs = djRuns(s), p = djPersos(s);
+  $('#dj-runs').textContent = runs > 0 ? fmtRuns(runs) : '—';
+  $('#dj-runs-detail').textContent = runs > 0
+    ? (p > 1 ? `${djNbCles(s)} clefs ÷ ${p} personnages` : 'un personnage, une clef par run')
+    : 'renseigne un nombre de clefs';
   const tt = djTempsTotal(s);
   $('#dj-temps-total').textContent  = tt > 0 ? fmtDuree(tt) : '—';
   $('#dj-temps-detail').textContent = tt > 0
-    ? num(s.tempsMin) + ' min par donjon'
-    : 'renseigne une durée par donjon';
+    ? `${num(s.tempsMin)} min × ${fmtRuns(runs)} runs`
+    : 'renseigne une durée par run';
 }
 
 function renderDjDrops(s){
@@ -3665,11 +3683,12 @@ function renderDjResultat(s){
   set('#dj-r-gain', s.drops.length ? fmt(gain) : '—', s.drops.length ? 'gold' : 'dim');
   set('#dj-r-benef', (n || s.drops.length) ? fmtSigned(benef) : '—',
       !(n || s.drops.length) ? 'dim' : benef >= 0 ? 'credit' : 'debit');
-  const pd = djParDonjon(s, benef);
+  const runs = djRuns(s);
+  const pd = djParRun(s, benef);
   set('#dj-r-pardonjon', pd === null ? '—' : fmtSigned(pd),
       pd === null ? 'dim' : pd >= 0 ? 'credit' : 'debit');
-  $('#dj-r-pardonjon-foot').textContent = n
-    ? `sur ${n} donjon${n > 1 ? 's' : ''} · ${fmt(djParDonjon(s, gain))} de butin brut`
+  $('#dj-r-pardonjon-foot').textContent = runs > 0
+    ? `sur ${fmtRuns(runs)} run${runs > 1 ? 's' : ''} · ${fmt(djParRun(s, gain))} de butin brut`
     : 'nombre de clefs manquant';
 
   const ph = djParHeure(s, benef);
@@ -3713,7 +3732,7 @@ function renderDjListe(){
   t.innerHTML =
     `<thead><tr>
        <th style="width:44px"></th><th>Session</th>
-       <th class="r" style="width:80px">Donjons</th>
+       <th class="r" style="width:80px">Runs</th>
        <th class="r col-money" style="width:120px">Coût</th>
        <th class="r col-money" style="width:120px">Butin</th>
        <th class="r col-money" style="width:140px">Bénéfice</th>
@@ -3722,12 +3741,13 @@ function renderDjListe(){
        <th style="width:150px"></th>
      </tr></thead><tbody>` +
     list.map(s => {
-      const benef = djBenefice(s), pd = djParDonjon(s, benef), ph = djParHeure(s, benef);
+      const benef = djBenefice(s), pd = djParRun(s, benef), ph = djParHeure(s, benef);
       return `<tr data-id="${s.id}"${cur && cur.id === s.id ? ' style="background:rgba(232,184,75,.05)"' : ''}>
         <td>${thumbTag(s.cle.img, 'thumb thumb-sm')}</td>
         <td>${esc(djTitre(s))}
           <div style="font-size:11px;color:var(--text-3)">${esc(s.cle.name || 'clef non définie')} · ${dateFR(s.createdAt)}</div></td>
-        <td class="r"><span class="money">${djNbCles(s) || '—'}</span></td>
+        <td class="r"><span class="money">${djRuns(s) ? fmtRuns(djRuns(s)) : '—'}</span>
+          ${djPersos(s) > 1 ? `<div style="font-size:11px;color:var(--text-3)">${djNbCles(s)} clefs · ${djPersos(s)} perso.</div>` : ''}</td>
         <td class="col-money">${moneyCell(djCout(s))}</td>
         <td class="col-money">${moneyCell(djGain(s), 'gold')}</td>
         <td class="col-money">${signedCell(benef)}</td>
@@ -3813,6 +3833,11 @@ function initDonjon(){
   $('#dj-nbcles').addEventListener('input', e => {
     const s = djCurrent(); if(!s) return;
     s.nbCles = e.target.value; s.updatedAt = Date.now();
+    commit(); djMajCle(s); renderDjResultat(s); renderDjSessions(); renderDjListe();
+  });
+  $('#dj-persos').addEventListener('input', e => {
+    const s = djCurrent(); if(!s) return;
+    s.persos = e.target.value; s.updatedAt = Date.now();
     commit(); djMajCle(s); renderDjResultat(s); renderDjSessions(); renderDjListe();
   });
   $('#dj-temps').addEventListener('input', e => {

@@ -28,7 +28,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 | **Craft** | Recherche d'équipement, recette remplie automatiquement et verrouillée, coût des ressources, comparaison prix marché / ton prix, dossiers |
 | **Forgemagie** | Relevé des prix de runes, arbitrage acheter-ou-crafter, session de forge avec coût des runes et ROI |
 | **Familier** | Rentabilité de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
-| **Donjon** | Sessions de farm : coût des clefs craftées d'un côté, butin ramassé de l'autre, bénéfice total, par run et par heure |
+| **Donjon** | Sessions de farm : coût des clefs craftées d'un côté, butin ramassé de l'autre, bénéfice total, par run et par heure, multi-compte compris |
 | **Prix** | Le référentiel commun : ressources et runes au même endroit |
 | **Ventes** | File des items en vente (venus du Craft ou de la Forge), puis registre des ventes conclues |
 | **Données** | Export, import, réinitialisation |
@@ -54,14 +54,17 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 ```
 prix d'une clef  = Σ(quantité × prix) de sa recette
 coût de session  = prix d'une clef × nombre de clefs
+runs réels       = nombre de clefs ÷ personnages par run
 butin            = Σ(quantité × prix) des ressources ramassées
 bénéfice         = butin − coût
-par donjon       = bénéfice ÷ nombre de clefs
-temps de farm    = durée d'un donjon × nombre de clefs
+par run          = bénéfice ÷ runs réels
+temps de farm    = durée d'un run × runs réels
 par heure        = bénéfice × 60 ÷ temps de farm
 ```
 
-Le nombre de clefs fait aussi office de nombre de runs : une clef, un donjon. La durée d'un donjon, en minutes, donne le **rendement horaire** — le seul chiffre qui permette de comparer deux donjons entre eux, puisqu'un farm très rentable mais très lent peut valoir moins qu'un farm modeste et rapide. Sans durée renseignée, la colonne reste muette et le reste fonctionne. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
+**Les clefs portent le coût, les runs portent le temps**, et en multi-compte les deux ne se confondent pas : chaque personnage pose sa clef, mais tous courent le même donjon. 400 clefs à 4 personnages coûtent bien 400 clefs, mais ne font que 100 runs — d'où un rendement horaire quatre fois meilleur qu'en solo. Le champ « Personnages par run » vaut 1 par défaut, ce qui laisse les sessions solo inchangées.
+
+La durée d'un run, en minutes, donne le **rendement horaire** — le seul chiffre qui permette de comparer deux donjons entre eux, puisqu'un farm très rentable mais très lent peut valoir moins qu'un farm modeste et rapide. Sans durée renseignée, la colonne reste muette et le reste fonctionne. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
 
 **Familier** — une croquette vaut toujours **500 XP** ; c'est le prix que tu la paies qui varie, et c'est lui qui fixe l'étalon.
 
