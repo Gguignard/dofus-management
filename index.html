@@ -138,6 +138,7 @@ h1,h2,h3,.display{font-family:var(--font-display);font-stretch:87.5%;font-weight
 .grid-2{grid-template-columns:1fr 1fr}
 .grid-3{grid-template-columns:repeat(3,1fr)}
 .grid-4{grid-template-columns:repeat(4,1fr)}
+.grid-5{grid-template-columns:repeat(5,1fr)}
 
 /* ─── registre (tables) ─── */
 .ledger{width:100%;border-collapse:collapse}
@@ -329,7 +330,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
 
 /* ─── responsive ─── */
 @media(max-width:1100px){
-  .grid-4{grid-template-columns:1fr 1fr}
+  .grid-4,.grid-5{grid-template-columns:1fr 1fr}
   .grid-3{grid-template-columns:1fr 1fr}
 }
 @media(max-width:860px){
@@ -345,7 +346,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
   .rail-nav button.active::before{left:0;right:0;top:auto;bottom:-6px;width:auto;height:2px}
   .rail-nav .tally{display:none}
   .main{padding:18px 14px 60px}
-  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr}
   .field{flex-wrap:wrap}
   .field .hint{width:auto;margin-left:auto}
 }
@@ -806,16 +807,22 @@ select{cursor:pointer;appearance:none;padding-right:26px;
     </div>
 
     <div class="panel">
-      <div class="panel-hd"><h2>Nombre de runs</h2></div>
+      <div class="panel-hd"><h2>Runs et durée</h2></div>
       <div class="panel-bd">
         <div class="field" style="padding-top:0">
           <label>Clefs craftées <span style="color:var(--text-3)">— soit autant de donjons</span></label>
           <div class="ctl"><input type="number" id="dj-nbcles" min="0" placeholder="0"></div>
         </div>
-        <div class="grid grid-2" style="margin-top:14px">
+        <div class="field">
+          <label>Durée d'un donjon <span style="color:var(--text-3)">— en minutes, pour le rendement horaire</span></label>
+          <div class="ctl"><input type="number" id="dj-temps" min="0" step="1" placeholder="0"></div>
+        </div>
+        <div class="grid grid-3" style="margin-top:14px">
           <div class="kpi"><div class="lbl">Prix d'une clef</div><div class="val num gold" id="dj-prix-cle">0</div></div>
           <div class="kpi"><div class="lbl">Coût de la session</div><div class="val num" id="dj-cout">—</div>
             <div class="foot" id="dj-cout-detail">renseigne un nombre de clefs</div></div>
+          <div class="kpi"><div class="lbl">Temps de farm</div><div class="val num" id="dj-temps-total">—</div>
+            <div class="foot" id="dj-temps-detail">renseigne une durée par donjon</div></div>
         </div>
       </div>
     </div>
@@ -833,12 +840,14 @@ select{cursor:pointer;appearance:none;padding-right:26px;
     <div class="panel">
       <div class="panel-hd"><h2>Résultat</h2></div>
       <div class="panel-bd">
-        <div class="grid grid-4" style="margin-bottom:14px">
+        <div class="grid grid-5" style="margin-bottom:14px">
           <div class="kpi"><div class="lbl">Coût des clefs</div><div class="val num" id="dj-r-cout">—</div></div>
           <div class="kpi"><div class="lbl">Butin</div><div class="val num" id="dj-r-gain">—</div></div>
           <div class="kpi"><div class="lbl">Bénéfice</div><div class="val num" id="dj-r-benef">—</div></div>
           <div class="kpi"><div class="lbl">Par donjon</div><div class="val num" id="dj-r-pardonjon">—</div>
             <div class="foot" id="dj-r-pardonjon-foot">—</div></div>
+          <div class="kpi"><div class="lbl">Par heure</div><div class="val num" id="dj-r-parheure">—</div>
+            <div class="foot" id="dj-r-parheure-foot">—</div></div>
         </div>
         <div class="verdict idle" id="dj-verdict"></div>
       </div>
@@ -1268,6 +1277,13 @@ function fmtDec(n, d = 2){
 function fmtPct(n){
   if(n === null || n === undefined || isNaN(n) || !isFinite(n)) return '—';
   return (n >= 0 ? '+' : '−') + Math.abs(n).toFixed(1).replace('.',',') + ' %';
+}
+/* Une duree en minutes, lue comme on la dit : 200 -> 3 h 20. */
+function fmtDuree(min){
+  if(min === null || isNaN(min) || min <= 0) return '—';
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  if(!h) return m + ' min';
+  return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') : '');
 }
 function dateFR(ts){
   return new Date(ts).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' });
@@ -3475,7 +3491,7 @@ function djNew(){
   const s = {
     id: uid(), createdAt: Date.now(), updatedAt: Date.now(),
     nom: '', cle: { name:'', img:'', id:null, rows:[] }, locked:false,
-    nbCles: '', drops: []
+    nbCles: '', tempsMin: '', drops: []
   };
   djSessions().unshift(s);
   S.draft.donjon = { currentId: s.id };
@@ -3515,6 +3531,9 @@ const djCout     = s => djPrixCle(s) * djNbCles(s);
 const djGain     = s => s.drops.reduce((t, d) => t + num(d.qty) * num(d.prix), 0);
 const djBenefice = s => djGain(s) - djCout(s);
 const djParDonjon = (s, v) => djNbCles(s) > 0 ? v / djNbCles(s) : null;
+/* Le rendement horaire : la seule mesure qui compare deux donjons entre eux. */
+const djTempsTotal = s => num(s.tempsMin) * djNbCles(s);
+const djParHeure   = (s, v) => djTempsTotal(s) > 0 ? v * 60 / djTempsTotal(s) : null;
 
 /* ─── rendu ─── */
 function renderDonjon(){
@@ -3541,6 +3560,7 @@ function renderDjSessions(){
 function djPaintEntete(s){
   $('#dj-nom').value    = s.nom;
   $('#dj-nbcles').value = s.nbCles;
+  $('#dj-temps').value  = s.tempsMin;
   const img = $('#dj-cle-img');
   if(s.cle.img){ img.src = s.cle.img; img.style.display = ''; } else { img.style.display = 'none'; }
   $('#dj-cle-search').value = s.cle.name;
@@ -3596,6 +3616,11 @@ function djMajCle(s){
   $('#dj-cout-detail').textContent = djNbCles(s)
     ? `${fmt(djPrixCle(s))} × ${djNbCles(s)} clefs`
     : 'renseigne un nombre de clefs';
+  const tt = djTempsTotal(s);
+  $('#dj-temps-total').textContent  = tt > 0 ? fmtDuree(tt) : '—';
+  $('#dj-temps-detail').textContent = tt > 0
+    ? num(s.tempsMin) + ' min par donjon'
+    : 'renseigne une durée par donjon';
 }
 
 function renderDjDrops(s){
@@ -3647,6 +3672,13 @@ function renderDjResultat(s){
     ? `sur ${n} donjon${n > 1 ? 's' : ''} · ${fmt(djParDonjon(s, gain))} de butin brut`
     : 'nombre de clefs manquant';
 
+  const ph = djParHeure(s, benef);
+  set('#dj-r-parheure', ph === null ? '—' : fmtSigned(ph),
+      ph === null ? 'dim' : ph >= 0 ? 'credit' : 'debit');
+  $('#dj-r-parheure-foot').textContent = ph === null
+    ? "durée d'un donjon manquante"
+    : `${fmtDuree(djTempsTotal(s))} de farm · ${fmt(djParHeure(s, gain))} de butin brut`;
+
   const v = $('#dj-verdict');
   let cls, lbl, detail;
   if(!n && !s.drops.length){
@@ -3656,7 +3688,9 @@ function renderDjResultat(s){
     detail = `${fmt(cout)} kamas engagés. Ajoute ce que tu ramasses au fur et à mesure.`;
   } else if(benef > 0){
     cls = 'ok'; lbl = 'Session rentable';
-    detail = `${fmtPct(roi)} de retour sur les ${fmt(cout)} kamas de clefs.`;
+    const ph2 = djParHeure(s, benef);
+    detail = `${fmtPct(roi)} de retour sur les ${fmt(cout)} kamas de clefs`
+      + (ph2 === null ? '.' : `, soit ${fmt(ph2)} kamas de l’heure.`);
   } else if(benef < 0){
     cls = 'ko'; lbl = 'Session déficitaire';
     detail = `Le butin ne couvre pas les ${fmt(cout)} kamas de clefs.`;
@@ -3684,10 +3718,11 @@ function renderDjListe(){
        <th class="r col-money" style="width:120px">Butin</th>
        <th class="r col-money" style="width:140px">Bénéfice</th>
        <th class="r col-money" style="width:130px">Par donjon</th>
+       <th class="r col-money" style="width:130px">Par heure</th>
        <th style="width:150px"></th>
      </tr></thead><tbody>` +
     list.map(s => {
-      const benef = djBenefice(s), pd = djParDonjon(s, benef);
+      const benef = djBenefice(s), pd = djParDonjon(s, benef), ph = djParHeure(s, benef);
       return `<tr data-id="${s.id}"${cur && cur.id === s.id ? ' style="background:rgba(232,184,75,.05)"' : ''}>
         <td>${thumbTag(s.cle.img, 'thumb thumb-sm')}</td>
         <td>${esc(djTitre(s))}
@@ -3697,6 +3732,7 @@ function renderDjListe(){
         <td class="col-money">${moneyCell(djGain(s), 'gold')}</td>
         <td class="col-money">${signedCell(benef)}</td>
         <td class="col-money">${pd === null ? '<span class="money dim">—</span>' : signedCell(pd)}</td>
+        <td class="col-money">${ph === null ? '<span class="money dim">—</span>' : signedCell(ph)}</td>
         <td class="r">
           <button class="btn btn-sm" data-act="open">Ouvrir</button>
           <button class="btn-icon" data-act="dup" title="Dupliquer" style="color:var(--text-3)">⧉</button>
@@ -3778,6 +3814,11 @@ function initDonjon(){
     const s = djCurrent(); if(!s) return;
     s.nbCles = e.target.value; s.updatedAt = Date.now();
     commit(); djMajCle(s); renderDjResultat(s); renderDjSessions(); renderDjListe();
+  });
+  $('#dj-temps').addEventListener('input', e => {
+    const s = djCurrent(); if(!s) return;
+    s.tempsMin = e.target.value; s.updatedAt = Date.now();
+    commit(); djMajCle(s); renderDjResultat(s); renderDjListe();
   });
   $('#dj-lock').addEventListener('click', () => {
     const s = djCurrent(); if(!s) return;

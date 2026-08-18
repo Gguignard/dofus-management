@@ -28,7 +28,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 | **Craft** | Recherche d'équipement, recette remplie automatiquement et verrouillée, coût des ressources, comparaison prix marché / ton prix, dossiers |
 | **Forgemagie** | Relevé des prix de runes, arbitrage acheter-ou-crafter, session de forge avec coût des runes et ROI |
 | **Familier** | Rentabilité de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
-| **Donjon** | Sessions de farm : coût des clefs craftées d'un côté, butin ramassé de l'autre, bénéfice total et par run |
+| **Donjon** | Sessions de farm : coût des clefs craftées d'un côté, butin ramassé de l'autre, bénéfice total, par run et par heure |
 | **Prix** | Le référentiel commun : ressources et runes au même endroit |
 | **Ventes** | File des items en vente (venus du Craft ou de la Forge), puis registre des ventes conclues |
 | **Données** | Export, import, réinitialisation |
@@ -57,9 +57,11 @@ coût de session  = prix d'une clef × nombre de clefs
 butin            = Σ(quantité × prix) des ressources ramassées
 bénéfice         = butin − coût
 par donjon       = bénéfice ÷ nombre de clefs
+temps de farm    = durée d'un donjon × nombre de clefs
+par heure        = bénéfice × 60 ÷ temps de farm
 ```
 
-Le nombre de clefs fait aussi office de nombre de runs : une clef, un donjon. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
+Le nombre de clefs fait aussi office de nombre de runs : une clef, un donjon. La durée d'un donjon, en minutes, donne le **rendement horaire** — le seul chiffre qui permette de comparer deux donjons entre eux, puisqu'un farm très rentable mais très lent peut valoir moins qu'un farm modeste et rapide. Sans durée renseignée, la colonne reste muette et le reste fonctionne. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
 
 **Familier** — une croquette vaut toujours **500 XP** ; c'est le prix que tu la paies qui varie, et c'est lui qui fixe l'étalon.
 
