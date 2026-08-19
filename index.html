@@ -377,6 +377,7 @@ select{cursor:pointer;appearance:none;padding-right:26px;
     <button data-page="fm"><span class="ico">✦</span>Forgemagie<span class="tally num" id="tally-fm">0</span></button>
     <button data-page="familier"><span class="ico">🐾</span>Familier<span class="tally num" id="tally-fav">0</span></button>
     <button data-page="donjon"><span class="ico">⛨</span>Donjon<span class="tally num" id="tally-donjon">0</span></button>
+    <button data-page="brisage"><span class="ico">✷</span>Brisage<span class="tally num" id="tally-brisage">0</span></button>
     <button data-page="prix"><span class="ico">≡</span>Prix<span class="tally num" id="tally-prix">0</span></button>
     <button data-page="ventes"><span class="ico">▲</span>Ventes<span class="tally num" id="tally-ventes">0</span></button>
     <button data-page="donnees"><span class="ico">⛁</span>Données</button>
@@ -867,6 +868,76 @@ select{cursor:pointer;appearance:none;padding-right:26px;
   </div>
 </section>
 
+<!-- ═══════════ BRISAGE ═══════════ -->
+<section class="page" id="page-brisage">
+  <div class="page-hd">
+    <h1>Brisage</h1>
+    <p>Ce que valent les composants d'un item face à ce que rapportent ses runes. Chaque relevé est daté : c'est en les empilant qu'on voit quels items deviennent intéressants à briser.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><h2>Item</h2><div class="spacer"></div>
+      <span class="eyebrow" id="br-src"></span>
+      <button class="btn btn-sm" id="br-lock" style="display:none"></button>
+    </div>
+    <div class="panel-bd">
+      <div class="row-flex">
+        <img class="thumb thumb-lg" id="br-img" alt="" style="display:none">
+        <div class="search-wrap">
+          <input type="text" id="br-name" placeholder="Chercher un équipement à briser" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+    </div>
+    <div class="panel-bd flush table-scroll"><table class="ledger" id="br-rows"></table></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--rule-soft);display:flex;align-items:center;gap:12px">
+      <button class="btn btn-sm" id="br-add">+ Ajouter un composant</button>
+      <div style="flex:1"></div>
+      <span class="eyebrow">valeur des composants <span class="money gold num" id="br-cout">0</span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><h2>Brisage</h2></div>
+    <div class="panel-bd">
+      <div class="field" style="padding-top:0">
+        <label>Coefficient de brisage <span style="color:var(--text-3)">— le taux du jour, en pourcentage</span></label>
+        <div class="ctl"><input type="number" id="br-coeff" min="0" step="0.1" placeholder="0"></div>
+      </div>
+      <div class="field">
+        <label>Gain estimé <span style="color:var(--text-3)">— ce que rapportent les runes, en kamas bruts</span></label>
+        <div class="ctl"><input type="number" id="br-gain" min="0" placeholder="0"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><h2>Résultat</h2></div>
+    <div class="panel-bd">
+      <div class="grid grid-4" style="margin-bottom:14px">
+        <div class="kpi"><div class="lbl">Composants</div><div class="val num" id="br-r-cout">—</div></div>
+        <div class="kpi"><div class="lbl">Gain de brisage</div><div class="val num" id="br-r-gain">—</div></div>
+        <div class="kpi"><div class="lbl">Écart</div><div class="val num" id="br-r-benef">—</div></div>
+        <div class="kpi"><div class="lbl">Rentabilité</div><div class="val num" id="br-r-renta">—</div>
+          <div class="foot" id="br-r-renta-foot">coefficient non renseigné</div></div>
+      </div>
+      <div class="verdict idle" id="br-verdict"></div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-primary" id="br-save">Enregistrer le relevé</button>
+        <button class="btn" id="br-reset">Nouvel item</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><h2>Relevés</h2><div class="spacer"></div>
+      <span class="eyebrow" id="br-count"></span>
+      <input type="search" id="br-search" placeholder="Filtrer un item" style="max-width:200px">
+    </div>
+    <div class="panel-bd" style="padding-bottom:8px"><div class="chip-row" id="br-sorts"></div></div>
+    <div class="panel-bd flush table-scroll"><table class="ledger" id="br-liste"></table></div>
+  </div>
+</section>
+
 <!-- ═══════════ PRIX ═══════════ -->
 <section class="page" id="page-prix">
   <div class="page-hd">
@@ -1197,10 +1268,11 @@ function blankState(){
     ventesEnCours: [],
     ventes:     [],
     donjonSessions: [],
+    brisages:   [],
     familier:   { xpTotal:179592, prixCroq:13920, marge:30,
                   familiers:[], plan:[], favoris:[] },
     /* le travail en cours survit à un rechargement */
-    draft:      { craft:null, fm:null, donjon:null },
+    draft:      { craft:null, fm:null, donjon:null, brisage:null },
     itemCache:  {}
   };
 }
@@ -1227,7 +1299,7 @@ function hydrate(raw){
   ['priceBook','runePrices','itemCache'].forEach(k=>{
     s[k] = (raw[k] && typeof raw[k]==='object' && !Array.isArray(raw[k])) ? raw[k] : {};
   });
-  ['dossiers','crafts','fmSessions','ventesEnCours','ventes','donjonSessions'].forEach(k=>{
+  ['dossiers','crafts','fmSessions','ventesEnCours','ventes','donjonSessions','brisages'].forEach(k=>{
     s[k] = Array.isArray(raw[k]) ? raw[k] : [];
   });
   ['familiers','plan','favoris'].forEach(k=>{
@@ -3424,6 +3496,8 @@ async function importData(input, mode){
   inc.fmSessions.forEach(x => { if(!sids.has(x.id)){ S.fmSessions.push(x); added.sessions++; } });
   const djids = byId(S.donjonSessions, 'id');
   inc.donjonSessions.forEach(x => { if(!djids.has(x.id)){ S.donjonSessions.push(x); added.sessions++; } });
+  const brids = byId(S.brisages, 'id');
+  inc.brisages.forEach(x => { if(!brids.has(x.id)){ S.brisages.push(x); added.sessions++; } });
   const vids = byId(S.ventes, 'id');
   inc.ventes.forEach(x => { if(!vids.has(x.id)){ S.ventes.push(x); added.ventes++; } });
   const eids = byId(S.ventesEnCours, 'id');
@@ -3452,6 +3526,7 @@ function renderDonnees(){
     ['Dossiers', S.dossiers.length],
     ['Sessions de forgemagie', S.fmSessions.length],
     ['Sessions de donjon', S.donjonSessions.length],
+    ['Relevés de brisage', S.brisages.length],
     ['Items en vente', S.ventesEnCours.length],
     ['Ventes au registre', S.ventes.length],
     ['Prix de ressources', Object.keys(S.priceBook).length],
@@ -3974,6 +4049,340 @@ function initDonjon(){
   });
 }
 
+/* ═══════════════ §10c · BRISAGE ═══════════════
+   Un relevé = un item, ce que valent ses composants au moment où on
+   regarde, le coefficient de brisage du jour et ce que le brisage rapporte.
+   Le même item relevé plusieurs fois raconte l'évolution du marché.   */
+
+const BR = { sort:'date', filtre:'' };
+
+function brDraft(){
+  if(!S.draft.brisage)
+    S.draft.brisage = { name:'', img:'', itemId:null, rows:[], locked:false, coeff:'', gainBrut:'' };
+  const d = S.draft.brisage;
+  if(!Array.isArray(d.rows)) d.rows = [];
+  return d;
+}
+
+/* ─── calculs ─── */
+const brCout     = d => coutCraft(d.rows);
+const brGain     = d => num(d.gainBrut);
+const brBenefice = d => brGain(d) - brCout(d);
+const brRenta    = d => brCout(d) > 0 ? brBenefice(d) / brCout(d) * 100 : null;
+
+/* ─── composition ─── */
+function renderBrRows(){
+  const d = brDraft();
+  const locked = r => d.locked && r.fromRecipe;
+  const t = $('#br-rows');
+  if(!d.rows.length){
+    t.innerHTML = `<tbody>${emptyRow(6, "Cherche un équipement : sa composition se remplit toute seule.")}</tbody>`;
+  } else {
+    t.innerHTML =
+      `<thead><tr>
+         <th style="width:44px"></th><th>Composant</th>
+         <th class="r" style="width:70px">Qté</th>
+         <th class="r col-money" style="width:130px">Prix estimé</th>
+         <th class="r col-money" style="width:130px">Sous-total</th>
+         <th style="width:40px"></th>
+       </tr></thead><tbody>` +
+      d.rows.map((r,i) => {
+        const nameCell = locked(r) ? `<span>${esc(r.name)}</span>`
+          : `<input type="text" data-f="name" value="${esc(r.name)}" placeholder="Chercher une ressource" autocomplete="off" spellcheck="false">`;
+        const qtyCell = locked(r) ? `<span class="money">${fmt(num(r.qty))}</span>`
+          : `<input type="number" data-f="qty" min="0" value="${esc(r.qty)}" style="text-align:center">`;
+        return `<tr data-i="${i}">
+          <td>${thumbTag(r.img, 'thumb thumb-sm')}</td>
+          <td>${nameCell}</td>
+          <td class="r">${qtyCell}</td>
+          <td class="col-money"><input type="number" data-f="prix" min="0" value="${esc(r.prix)}"></td>
+          <td class="col-money"><span class="money dim" data-sub>${fmt(num(r.qty) * num(r.prix))}</span></td>
+          <td class="c">${locked(r) ? '' : `<button class="btn-icon" data-act="del">×</button>`}</td>
+        </tr>`;
+      }).join('') + '</tbody>';
+  }
+  const btn = $('#br-lock');
+  const hasRecipe = d.rows.some(r => r.fromRecipe);
+  btn.style.display = hasRecipe ? '' : 'none';
+  btn.textContent = d.locked ? 'Modifier la composition' : 'Reverrouiller';
+  brMaj();
+}
+
+/* Totaux seuls : redessiner pendant la frappe ferait perdre le focus. */
+function brMaj(){
+  const d = brDraft();
+  $$('#br-rows tbody tr').forEach(tr => {
+    const r = d.rows[+tr.dataset.i];
+    const cell = tr.querySelector('[data-sub]');
+    if(cell && r) cell.textContent = fmt(num(r.qty) * num(r.prix));
+  });
+  $('#br-cout').textContent = fmt(brCout(d));
+  renderBrResultat();
+}
+
+function renderBrResultat(){
+  const d = brDraft();
+  const cout = brCout(d), gain = brGain(d), benef = brBenefice(d), pct = brRenta(d);
+  const set = (id, txt, cls) => { const el = $(id); el.textContent = txt; el.className = 'val num ' + (cls || ''); };
+
+  set('#br-r-cout', cout > 0 ? fmt(cout) : '—', cout > 0 ? '' : 'dim');
+  set('#br-r-gain', gain > 0 ? fmt(gain) : '—', gain > 0 ? 'gold' : 'dim');
+  set('#br-r-benef', (cout > 0 || gain > 0) ? fmtSigned(benef) : '—',
+      !(cout > 0 || gain > 0) ? 'dim' : benef >= 0 ? 'credit' : 'debit');
+  set('#br-r-renta', pct === null ? '—' : fmtPct(pct),
+      pct === null ? 'dim' : pct >= 0 ? 'credit' : 'debit');
+  $('#br-r-renta-foot').textContent = num(d.coeff) > 0
+    ? `au coefficient de ${fmtDec(num(d.coeff), 1)} %`
+    : 'coefficient non renseigné';
+
+  const v = $('#br-verdict');
+  let cls, lbl, detail;
+  if(!cout && !gain){
+    cls = 'idle'; lbl = 'Relevé vide';
+    detail = "Choisis un item, estime le prix de ses composants et le gain de brisage.";
+  } else if(!gain){
+    cls = 'idle'; lbl = 'Gain de brisage manquant';
+    detail = `L'item vaut ${fmt(cout)} kamas de composants. Combien rapportent ses runes ?`;
+  } else if(benef > 0){
+    cls = 'ok'; lbl = 'Vaut le brisage';
+    detail = `Les runes rapportent ${fmtPct(pct)} de plus que les composants.`;
+  } else if(benef < 0){
+    cls = 'ko'; lbl = 'À ne pas briser';
+    detail = `Tu perds ${fmt(-benef)} kamas par rapport à la valeur des composants.`;
+  } else {
+    cls = 'idle'; lbl = 'Équilibre'; detail = 'Briser ou revendre les composants revient au même.';
+  }
+  v.className = 'verdict ' + cls;
+  v.innerHTML = `<div><div class="lbl">${lbl}</div><div class="detail">${detail}</div></div>` +
+    ((cout || gain) ? `<div class="amt">${fmtSigned(benef)}</div>` : '');
+}
+
+function brPaint(){
+  const d = brDraft(), img = $('#br-img');
+  $('#br-name').value  = d.name;
+  $('#br-coeff').value = d.coeff;
+  $('#br-gain').value  = d.gainBrut;
+  if(d.img){ img.src = d.img; img.style.display = ''; } else { img.style.display = 'none'; }
+}
+
+async function brPickItem(item){
+  const d = brDraft();
+  d.name   = item.name;
+  d.img    = itemImg(item);
+  d.itemId = item.ankama_id || item.id;
+  commit(); brPaint();
+  $('#br-src').textContent = 'Chargement de la composition…';
+
+  let recipe = Array.isArray(item.recipe) && item.recipe.length ? item.recipe : null;
+  if(!recipe){
+    const detail = await apiItem(d.itemId);
+    recipe = detail && detail.recipe.length ? detail.recipe : null;
+  }
+  if(recipe){
+    const rows = await Promise.all(recipe.map(resolveIngredient));
+    d.rows = rows.map(r => ({ name:r.name, qty:r.qty, prix:getPrice(r.name) ?? 0, img:r.img, fromRecipe:true }));
+    d.locked = true;
+    $('#br-src').textContent = `${rows.length} composants · via dofusdude`;
+  } else {
+    d.rows = [];
+    d.locked = false;
+    $('#br-src').textContent = 'Aucune composition connue — à saisir';
+  }
+  commit(); renderBrRows();
+}
+
+function brReset(){
+  S.draft.brisage = { name:'', img:'', itemId:null, rows:[], locked:false, coeff:'', gainBrut:'' };
+  commit();
+  $('#br-src').textContent = '';
+  brPaint(); renderBrRows();
+  $('#br-name').focus();
+}
+
+/* ─── relevés ─── */
+function brSave(){
+  const d = brDraft();
+  const name = (d.name || '').trim();
+  if(!name){ toast("Nomme l'item avant d'enregistrer.", 'warn'); $('#br-name').focus(); return; }
+  if(brGain(d) <= 0){ toast('Renseigne le gain de brisage estimé.', 'warn'); $('#br-gain').focus(); return; }
+  S.brisages.unshift({
+    id: uid(), createdAt: Date.now(),
+    name, img: d.img || '', itemId: d.itemId || null,
+    rows: d.rows.filter(r => r.name.trim() || num(r.prix) > 0)
+                .map(r => ({ name:r.name.trim(), qty:num(r.qty), prix:num(r.prix), img:r.img||'', fromRecipe:!!r.fromRecipe })),
+    coeff: num(d.coeff), gainBrut: brGain(d), cout: brCout(d)
+  });
+  commit(); renderBrListe();
+  toast(`Relevé de « ${name} » enregistré`);
+}
+
+function brLoad(id){
+  const e = S.brisages.find(x => x.id === id);
+  if(!e) return;
+  S.draft.brisage = {
+    name: e.name, img: e.img || '', itemId: e.itemId || null,
+    rows: e.rows.map(r => ({ ...r })),
+    locked: e.rows.some(r => r.fromRecipe),
+    coeff: e.coeff || '', gainBrut: e.gainBrut || ''
+  };
+  commit();
+  $('#br-src').textContent = `Relevé du ${dateFR(e.createdAt)}`;
+  brPaint(); renderBrRows();
+  goPage('brisage');
+  toast(`Relevé de « ${e.name} » chargé`);
+}
+
+async function brDelete(id){
+  const e = S.brisages.find(x => x.id === id);
+  if(!e) return;
+  if(!await ask('Supprimer ce relevé ?', `${e.name} — ${dateFR(e.createdAt)}`, 'Supprimer')) return;
+  S.brisages = S.brisages.filter(x => x.id !== id);
+  commit(); renderBrListe();
+}
+
+const brEntryRenta = e => e.cout > 0 ? (e.gainBrut - e.cout) / e.cout * 100 : null;
+
+/* Un même item relevé plusieurs fois : on compare au relevé précédent pour
+   voir si le brisage devient plus ou moins intéressant. */
+function brEvolution(e){
+  const pct = brEntryRenta(e);
+  if(pct === null) return null;
+  const anterieur = S.brisages
+    .filter(x => norm(x.name) === norm(e.name) && x.createdAt < e.createdAt)
+    .sort((a,b) => b.createdAt - a.createdAt)[0];
+  if(!anterieur) return null;
+  const avant = brEntryRenta(anterieur);
+  return avant === null ? null : pct - avant;
+}
+
+function renderBrListe(){
+  $('#br-sorts').innerHTML =
+    `<span class="eyebrow" style="margin-right:4px">Trier</span>` +
+    [['date','Plus récents'],['renta','Rentabilité'],['coeff','Coefficient'],['nom','Item']]
+      .map(([k,l]) => `<button class="chip${BR.sort === k ? ' active' : ''}" data-brsort="${k}">${l}</button>`).join('');
+
+  const q = norm($('#br-search').value);
+  let list = S.brisages.filter(e => !q || norm(e.name).includes(q));
+  if(BR.sort === 'renta')      list = list.slice().sort((a,b) => (brEntryRenta(b) ?? -Infinity) - (brEntryRenta(a) ?? -Infinity));
+  else if(BR.sort === 'coeff') list = list.slice().sort((a,b) => num(b.coeff) - num(a.coeff));
+  else if(BR.sort === 'nom')   list = list.slice().sort((a,b) => a.name.localeCompare(b.name,'fr') || b.createdAt - a.createdAt);
+  else                         list = list.slice().sort((a,b) => b.createdAt - a.createdAt);
+
+  $('#br-count').textContent = S.brisages.length
+    ? `${S.brisages.length} relevé${S.brisages.length > 1 ? 's' : ''} · ${new Set(S.brisages.map(e => norm(e.name))).size} items suivis`
+    : '';
+
+  const t = $('#br-liste');
+  if(!list.length){
+    t.innerHTML = `<tbody>${emptyRow(1, S.brisages.length
+      ? 'Aucun relevé ne correspond.'
+      : "Aucun relevé. Enregistre-en un pour commencer à suivre l'intérêt du brisage dans le temps.")}</tbody>`;
+    return;
+  }
+  t.innerHTML =
+    `<thead><tr>
+       <th style="width:44px"></th><th>Item</th>
+       <th class="r" style="width:95px">Coefficient</th>
+       <th class="r" style="width:95px">Date</th>
+       <th class="r col-money" style="width:120px">Composants</th>
+       <th class="r col-money" style="width:120px">Gain brut</th>
+       <th class="r col-money" style="width:165px">Rentabilité</th>
+       <th style="width:110px"></th>
+     </tr></thead><tbody>` +
+    list.map(e => {
+      const pct = brEntryRenta(e), benef = e.gainBrut - e.cout, evo = brEvolution(e);
+      return `<tr data-id="${e.id}">
+        <td>${thumbTag(e.img, 'thumb thumb-sm')}</td>
+        <td>${esc(e.name)}</td>
+        <td class="r"><span class="money ${e.coeff ? 'gold' : 'dim'}">${e.coeff ? fmtDec(e.coeff, 1) + ' %' : '—'}</span></td>
+        <td class="r"><span class="money dim">${dateFR(e.createdAt)}</span></td>
+        <td class="col-money">${moneyCell(e.cout)}</td>
+        <td class="col-money">${moneyCell(e.gainBrut, 'gold')}</td>
+        <td class="col-money">${pct === null ? '<span class="money dim">—</span>' : `<span class="money ${pct >= 0 ? 'credit' : 'debit'}">${fmtPct(pct)}</span>`}
+          <div style="font-size:11px;color:var(--text-3)">${fmtSigned(benef)}${
+            evo === null ? '' : ` · <span style="color:${evo >= 0 ? 'var(--credit)' : 'var(--debit)'}">${evo >= 0 ? '+' : '−'}${Math.abs(evo).toFixed(1).replace('.', ',')} pts</span>`}</div></td>
+        <td class="r">
+          <button class="btn btn-sm" data-act="load">Ouvrir</button>
+          <button class="btn-icon" data-act="del">×</button>
+        </td>
+      </tr>`;
+    }).join('') + '</tbody>';
+}
+
+function renderBrisage(){
+  brPaint(); renderBrRows(); renderBrListe();
+}
+
+/* ─── câblage ─── */
+function initBrisage(){
+  bindAutocomplete({
+    root:'#br-name', selector:'input',
+    kinds:['equipment','weapons'],
+    onPick:(input, item) => brPickItem(item)
+  });
+  bindAutocomplete({
+    root:'#br-rows', selector:'input[data-f="name"]',
+    kinds:['resources','consumables'],
+    onPick:(input, item) => {
+      const r = brDraft().rows[+input.closest('tr').dataset.i];
+      if(!r) return;
+      r.name = item.name; r.img = itemImg(item);
+      const known = getPrice(item.name);
+      if(known !== null) r.prix = known;
+      commit(); renderBrRows();
+    }
+  });
+
+  $('#br-name').addEventListener('input',  e => { brDraft().name = e.target.value; commit(); });
+  $('#br-coeff').addEventListener('input', e => { brDraft().coeff = e.target.value; commit(); renderBrResultat(); });
+  $('#br-gain').addEventListener('input',  e => { brDraft().gainBrut = e.target.value; commit(); renderBrResultat(); });
+
+  $('#br-add').addEventListener('click', () => {
+    brDraft().rows.push({ name:'', qty:1, prix:0, img:'' });
+    commit(); renderBrRows();
+  });
+  $('#br-lock').addEventListener('click', () => {
+    const d = brDraft();
+    d.locked = !d.locked;
+    commit(); renderBrRows();
+    toast(d.locked ? 'Composition reverrouillée' : 'Composition déverrouillée', 'warn');
+  });
+  $('#br-save').addEventListener('click', brSave);
+  $('#br-reset').addEventListener('click', brReset);
+
+  delegate('#br-rows', 'input', 'input', (e, input) => {
+    const d = brDraft();
+    const r = d.rows[+input.closest('tr').dataset.i];
+    if(!r) return;
+    const f = input.dataset.f;
+    if(f === 'name'){
+      r.name = input.value;
+      const known = getPrice(r.name);
+      if(known !== null && num(r.prix) === 0){
+        r.prix = known;
+        const p = input.closest('tr').querySelector('input[data-f="prix"]');
+        if(p) p.value = known;
+      }
+    } else if(f === 'qty'){ r.qty = input.value === '' ? '' : num(input.value); }
+    else if(f === 'prix'){
+      r.prix = input.value === '' ? '' : num(input.value);
+      if(r.name.trim() && num(r.prix) > 0) setPrice(r.name, num(r.prix));
+    }
+    commit(); brMaj();
+  });
+  delegate('#br-rows', 'click', '[data-act="del"]', (e, b) => {
+    brDraft().rows.splice(+b.closest('tr').dataset.i, 1);
+    commit(); renderBrRows();
+  });
+
+  $('#br-search').addEventListener('input', renderBrListe);
+  delegate('#br-sorts', 'click', '[data-brsort]', (e, b) => { BR.sort = b.dataset.brsort; renderBrListe(); });
+  delegate('#br-liste', 'click', '[data-act]', (e, b) => {
+    const id = +b.closest('tr').dataset.id;
+    if(b.dataset.act === 'load') brLoad(id); else brDelete(id);
+  });
+}
+
 /* ═══════════════ §14 · NAVIGATION & DÉMARRAGE ═══════════════ */
 
 let currentPage = 'bilan';
@@ -3989,6 +4398,7 @@ function goPage(name){
   if(name === 'fm')       { renderFmPrix(); renderConv(); renderFmLines(); fmFillCraftSelect(); renderFmSessions(); }
   if(name === 'familier') renderFamilier();
   if(name === 'donjon')   renderDonjon();
+  if(name === 'brisage')  renderBrisage();
   if(name === 'prix')     { renderPrix(); renderPrixRunes(); }
   if(name === 'ventes')   renderVentes();
   if(name === 'donnees')  renderDonnees();
@@ -4012,6 +4422,7 @@ function refreshChrome(){
   $('#tally-fm').textContent     = S.fmSessions.length;
   $('#tally-fav').textContent    = S.familier.favoris.length;
   $('#tally-donjon').textContent = S.donjonSessions.length;
+  $('#tally-brisage').textContent = S.brisages.length;
   $('#tally-prix').textContent   = Object.keys(S.priceBook).length + Object.keys(S.runePrices).length;
   $('#tally-ventes').textContent = S.ventesEnCours.length;
 }
@@ -4022,6 +4433,7 @@ function renderAll(){
   renderFmPrix(); renderConv(); fmPaintItem(); renderFmLines(); renderFmSessions();
   renderFamilier();
   renderDonjon();
+  renderBrisage();
   renderPrix(); renderPrixRunes();
   renderVentes();
   renderBilan();
@@ -4041,6 +4453,7 @@ function boot(){
   initFm();
   initFamilier();
   initDonjon();
+  initBrisage();
   initVentes();
   initPrix();
   initDonnees();

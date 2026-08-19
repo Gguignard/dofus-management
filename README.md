@@ -20,7 +20,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 
 ---
 
-## Les huit onglets
+## Les neuf onglets
 
 | Onglet | Ce qu'il fait |
 |---|---|
@@ -29,6 +29,7 @@ puis ouvre `http://localhost:4173`. Un dépôt GitHub Pages fait aussi bien l'af
 | **Forgemagie** | Relevé des prix de runes, arbitrage acheter-ou-crafter, session de forge avec coût des runes et ROI |
 | **Familier** | Rentabilité de chaque ressource face à la croquette, 2117 ressources filtrables par zone, favoris, planification de lots |
 | **Donjon** | Sessions de farm : coût des clefs craftées d'un côté, butin ramassé de l'autre, bénéfice total, par run et par heure, multi-compte compris |
+| **Brisage** | Relevés datés : valeur des composants d'un item face au gain de ses runes, coefficient du jour, évolution dans le temps |
 | **Prix** | Le référentiel commun : ressources et runes au même endroit |
 | **Ventes** | File des items en vente (venus du Craft ou de la Forge), puis registre des ventes conclues |
 | **Données** | Export, import, réinitialisation |
@@ -68,6 +69,16 @@ Le butin se saisit dans le désordre, au fil des runs. Chaque ligne affiche donc
 
 La durée d'un run, en minutes, donne le **rendement horaire** — le seul chiffre qui permette de comparer deux donjons entre eux, puisqu'un farm très rentable mais très lent peut valoir moins qu'un farm modeste et rapide. Sans durée renseignée, la colonne reste muette et le reste fonctionne. Le butin est compté brut, sans taxe HDV — c'est ce que valent tes ressources au moment où tu les regardes, pas ce que tu encaisserais en les vendant.
 
+**Brisage** — un relevé compare ce que valent les composants d'un item à ce que rapportent ses runes, à une date donnée.
+
+```
+valeur des composants = Σ(quantité × prix estimé)
+écart                 = gain de brisage − valeur des composants
+rentabilité           = écart ÷ valeur des composants
+```
+
+Le coefficient de brisage et le gain en kamas bruts se saisissent à la main : ils dépendent du jour et du serveur. Chaque enregistrement est **horodaté**, et relever le même item plusieurs fois fait apparaître l'écart en points de rentabilité avec le relevé précédent — c'est ce qui permet de repérer un item qui devient intéressant. La liste se trie par date, rentabilité, coefficient ou item.
+
 **Familier** — une croquette vaut toujours **500 XP** ; c'est le prix que tu la paies qui varie, et c'est lui qui fixe l'étalon.
 
 ```
@@ -105,6 +116,7 @@ dossiers, crafts
 fmSessions     sessions de forge, avec lien facultatif vers un craft
 ventesEnCours, ventes
 donjonSessions sessions de farm : recette de la clef, nombre de runs, butin
+brisages       relevés datés : composition, coefficient, gain de brisage
 familier       paramètres, familiers suivis, planification, favoris
 draft          le travail en cours
 itemCache      réponses de l'API déjà obtenues
